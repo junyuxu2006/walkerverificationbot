@@ -15,7 +15,7 @@ go to config.py, put the corresponding information like 'commenturl' is the url 
 'token' is your Discord bot token.
 
 You need to install python 3.6 or above.
-dependencies: discord, discord.py, selenium, urllib, time, secrets.
+dependencies: discord, discord.py, selenium, time, secrets.
 
 Known issues: 
 1. sometimes, the site requires a prove your humanity captcha (This will be fixed and the captcha will be done automatically)

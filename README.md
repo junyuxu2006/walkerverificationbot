@@ -6,7 +6,7 @@ go to config.py, put the corresponding information like 'commenturl' is the url 
 'email' field is the email for the account you have on the platform.
 'password' field is the password for the account you have on the platform.
 'invitelink' is the invite link for the bot (you can get it on Discord Developer Portal).
-'PATH' is the path to your selenium web driver, please replace \ with \\ in 'PATH'.
+'PATH' is the path to your selenium web driver, please replace \ with double \ in 'PATH'.
 'controlroomID' is the channel ID for the channel for managing the bot.
 'controlchannelname' is the channel name for the control channel.
 'unverifiedrolename' is the name of the unverified role.

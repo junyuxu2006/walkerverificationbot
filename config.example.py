@@ -13,4 +13,5 @@ configs = {\
 'commenturl' : "URL of the post",\
 'Invitelink' : 'Invite link for the bot',\
 'verificationchannelname' : 'verification',\
+'logchannelname' : 'verification-bot-log',\
 }

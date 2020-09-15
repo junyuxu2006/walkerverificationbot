@@ -200,53 +200,111 @@ async def go(ctx):
     print(WalkerID[DiscordID])
     #xpathWalkerID = str("//*[contains(text(), '"+WalkerID+"'"+")]")
     #xpathToken = str("//*[contains(text(), '"+client.commentToken+"'"+")]")
-
-    WalkerIDelement = driver.find_element_by_xpath("/html/body/div[5]/div/div[1]/main/section/ul/li[last()]/div/div[1]/a/span")
-    #driver.find_elements_by_class_name("wid")
-    Tokenelement = driver.find_element_by_xpath("/html/body/div[5]/div/div[1]/main/section/ul/li[last()]/div/p")
-    #driver.find_elements_by_class_name("comment-author vcard")
-    WalkerIDFound = {}
-    TokenFound = {}
-    WalkerIDFound[DiscordID] = WalkerIDelement.get_attribute('textContent')
-    TokenFound[DiscordID] = Tokenelement.get_attribute('textContent')
     try:
+        WalkerIDelement = driver.find_element_by_xpath("/html/body/div[5]/div/div[1]/main/section/ul/li[last()]/div/div[1]/a/span")
+        #driver.find_elements_by_class_name("wid")
+        Tokenelement = driver.find_element_by_xpath("/html/body/div[5]/div/div[1]/main/section/ul/li[last()]/div/p")
+        #driver.find_elements_by_class_name("comment-author vcard")
+        WalkerIDFound = {}
+        TokenFound = {}
+        WalkerIDFound[DiscordID] = WalkerIDelement.get_attribute('textContent')
         TokenFound[DiscordID] = Tokenelement.get_attribute('textContent')
-        if TokenFound[DiscordID] == client.commentToken[DiscordID] and WalkerIDFound[DiscordID] == str(WalkerID[DiscordID]):
-            await ctx.channel.send("Verified.")
+        try:
+            TokenFound[DiscordID] = Tokenelement.get_attribute('textContent')
+            if TokenFound[DiscordID] == client.commentToken[DiscordID] and WalkerIDFound[DiscordID] == str(WalkerID[DiscordID]):
+                await ctx.channel.send("Verified.")
+                driver.quit()
+                role = get(member.guild.roles, name = verifiedrolename)
+                unrole = get(member.guild.roles, name = unverifiedrolename)
+                WalkerIDnick = "#"+str(WalkerID[DiscordID])
+                WalkerIDdict = {"walkerID": WalkerID}
+                generalchannel= discord.utils.get(member.guild.text_channels, name = generalchannelname)
+                with open ('data.json','r+') as f:
+                    json.dump(WalkerIDdict, f)
+                try:
+                    await member.add_roles(role)
+                    await member.remove_roles(unrole)
+                    await member.edit(nick=WalkerIDnick)
+                except discord.errors.Forbidden:
+                    await ctx.channel.send(f"{ctx.author.guild.owner.mention} I do not have permissions to add/remove roles and/or change {ctx.author.mention}'s nickname.")
+                try:
+                    await generalchannel.send(f"Walker {WalkerIDnick} has joined, Welcome!")
+                except AttributeError:
+                    await ctx.channel.send(f"{ctx.author.guild.owner.mention} I could not find the channel {generalchannelname}, in order for the bot to work properly, please add a channel with that name.")
+                    await random.choice(ctx.author.guild.text_channels).send(f"Walker {WalkerIDnick} has joined, Welcome!")
+                print(DiscordID)  
+            else:
+                await asyncio.sleep(2)
+                await ctx.channel.send("Could not find your comment, if you did comment, please make sure you commented the token below the link and you entered the correct Walker ID.")
+                driver.quit()
+        except KeyError:
+            await ctx.channel.send("An error occured, try again now with `$verify`. This is most likely caused by someone running this command on this bot at the same time as you.")
             driver.quit()
-            role = get(member.guild.roles, name = verifiedrolename)
-            unrole = get(member.guild.roles, name = unverifiedrolename)
-            WalkerIDnick = "#"+str(WalkerID[DiscordID])
-            WalkerIDdict = {"walkerID": WalkerID}
-            generalchannel= discord.utils.get(member.guild.text_channels, name = generalchannelname)
-            with open ('data.json','r+') as f:
-                json.dump(WalkerIDdict, f)
-            try:
-                await member.add_roles(role)
-                await member.remove_roles(unrole)
-                await member.edit(nick=WalkerIDnick)
-            except discord.errors.Forbidden:
-                await ctx.channel.send(f"{ctx.author.guild.owner.mention} I do not have permissions to add/remove roles and/or change {ctx.author.mention}'s nickname.")
-            try:
-                await generalchannel.send(f"Walker {WalkerIDnick} has joined, Welcome!")
-            except AttributeError:
-                await ctx.channel.send(f"{ctx.author.guild.owner.mention} I could not find the channel {generalchannelname}, in order for the bot to work properly, please add a channel with that name.")
-                await random.choice(ctx.author.guild.text_channels).send(f"Walker {WalkerIDnick} has joined, Welcome!")
-            print(DiscordID)  
-        else:
-            await asyncio.sleep(2)
-            await ctx.channel.send("Could not find your comment, if you did comment, please make sure you commented the token below the link and you entered the correct Walker ID.")
+        except selenium.common.exceptions.NoSuchElementException:
+            await ctx.channel.send("An error occured. You may have to wait a while for this error to be fixed, but in most cases, trying again with `$verify` will fix the problem.")
             driver.quit()
-    except KeyError:
-        await ctx.channel.send("An error occured, try again now with `$verify`. This is most likely caused by someone running this command on this bot at the same time as you.")
-        driver.quit()
+        except IndexError:
+            await ctx.channel.send("An error occured, try again now with `$verify`, then `$go`. This is most likely caused by you trying to put a text, nothing after, unmatched ID, or your Walker ID with the # without running `$verify`, which is invalid, retrying with the correct usage might fix the problem.")
+            driver.quit()
     except selenium.common.exceptions.NoSuchElementException:
-        await ctx.channel.send("An error occured. You may have to wait a while for this error to be fixed, but in most cases, trying again with `$verify` will fix the problem.")
-        driver.quit()
-    except IndexError:
-        await ctx.channel.send("An error occured, try again now with `$verify`, then `$go`. This is most likely caused by you trying to put a text, nothing after, unmatched ID, or your Walker ID with the # without running `$verify`, which is invalid, retrying with the correct usage might fix the problem.")
-        driver.quit()
-
+        captchaquestion = driver.find_element_by_xpath("/html/body/div/form/div/span").get_attribute('textContent')
+        captchaquestion = captchaquestion.strip("   ")
+        captchaquestionnumberlist = captchaquestion.split('+')
+        captchaanswer = captchaquestionnumberlist[0] + captchaquestionnumberlist[1]
+        cinputelement = driver.find_element_by_xpath("/html/body/div/form/div/input[1]")
+        cinputelement.send_keys(captchaanswer)
+        cinputelement.send_keys(Keys.ENTER)
+        inputemail.send_keys(email)
+        inputpassword.send_keys(password)
+        inputpassword.send_keys(Keys.ENTER)
+        driver.get(link)
+        WalkerIDelement = driver.find_element_by_xpath("/html/body/div[5]/div/div[1]/main/section/ul/li[last()]/div/div[1]/a/span")
+        #driver.find_elements_by_class_name("wid")
+        Tokenelement = driver.find_element_by_xpath("/html/body/div[5]/div/div[1]/main/section/ul/li[last()]/div/p")
+        #driver.find_elements_by_class_name("comment-author vcard")
+        WalkerIDFound = {}
+        TokenFound = {}
+        WalkerIDFound[DiscordID] = WalkerIDelement.get_attribute('textContent')
+        TokenFound[DiscordID] = Tokenelement.get_attribute('textContent')
+        try:
+            await ctx.channel.send("Found ID: "+WalkerIDFound[DiscordID])
+            await asyncio.sleep(1)
+            await ctx.channel.send("Found Token: "+TokenFound[DiscordID])
+            await asyncio.sleep(1)
+            await ctx.channel.send("Entered ID: "+WalkerID[DiscordID])
+            await asyncio.sleep(1)
+            await ctx.channel.send("Generated Token: "+client.commentToken[DiscordID])
+            await asyncio.sleep(1)
+            TokenFound[DiscordID] = Tokenelement.get_attribute('textContent')
+            if TokenFound[DiscordID] == client.commentToken[DiscordID] and WalkerIDFound[DiscordID] == str(WalkerID[DiscordID]):
+                await asyncio.sleep(2)
+                await ctx.channel.send("Verified.")
+                driver.quit()
+                role = get(member.guild.roles, name = verifiedrolename)
+                unrole = get(member.guild.roles, name = unverifiedrolename)
+                WalkerIDnick = "#"+str(WalkerID[DiscordID])
+                with open ('data.walkerdata','a') as f:
+                    f.write(str(WalkerID))
+                try:
+                    await member.add_roles(role)
+                    await member.remove_roles(unrole)
+                    await member.edit(nick=WalkerIDnick)
+                except discord.errors.Forbidden:
+                    await ctx.channel.send(f"{ctx.author.guild.owner.mention} I do not have permissions to add/remove roles and/or change {ctx.author.mention}'s nickname.")
+                print(DiscordID)  
+            else:
+                await asyncio.sleep(2)
+                await ctx.channel.send("Could not find your comment, if you did comment, please make sure you commented the token in the black box below the link and you entered the correct Walker ID.")
+                driver.quit()
+        except KeyError:
+            await ctx.channel.send("An error occured, try again now with `$verify`. This is most likely caused by someone running this command on this bot at the same time as you.")
+            driver.quit()
+        except selenium.common.exceptions.NoSuchElementException:
+            await ctx.channel.send("An error occured. You may have to wait a while for this error to be fixed, but in most cases, trying again with `$verify` will fix the problem.")
+            driver.quit()
+        except IndexError:
+            await ctx.channel.send("An error occured, try again now with `$verify`, then `$go`. This is most likely caused by you trying to put a text, nothing after, unmatched ID, or your Walker ID with the # without running `$verify`, which is invalid, retrying with the correct usage might fix the problem.")
+            driver.quit()
 @commands.cooldown(1, 1, commands.BucketType.user)
 @client.command()
 async def ungo(ctx):

@@ -136,9 +136,11 @@ async def help(ctx):
     embed.add_field(name="$hello", value="Bot will say Hello.", inline=True)
     embed.add_field(name="$verify", value="Shows instructions for verification, and generates a token to comment on.", inline=True)
     embed.add_field(name="$go", value="The command you type followed by your Walker ID for comment checking purposes.", inline=True)
-    embed.add_field(name="$ungo", value="The command you type to unverify.", inline=True)
+    embed.add_field(name="$unverify", value="The command you type to unverify.", inline=True)
     embed.add_field(name="$say", value="The command you type followed by your desired message to make the bot say that.", inline=True)
     embed.add_field(name="$lastverified", value="The command you type to show the last couple users with the user ID and Walker ID, **Admins only**", inline=True)
+    embed.add_field(name="$forceverify", value="The command you type to forcefully verify a user followed by a user mention and walker id with space between. **Admins only**")
+    embed.add_field(name="$forceunverify", value="The command you type to forcefully unverify a user followed by a user mention. **Admins only**")
     embed.set_footer(text="Noice")
     await ctx.channel.send(embed=embed)
     logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)
@@ -212,7 +214,7 @@ async def go(ctx):
         try:
             TokenFound[DiscordID] = Tokenelement.get_attribute('textContent')
             if TokenFound[DiscordID] == client.commentToken[DiscordID] and WalkerIDFound[DiscordID] == str(WalkerID[DiscordID]):
-                await ctx.channel.send("Verified.")
+                await ctx.channel.send("Verification completed, congrats!")
                 driver.quit()
                 role = get(member.guild.roles, name = verifiedrolename)
                 unrole = get(member.guild.roles, name = unverifiedrolename)
@@ -248,11 +250,16 @@ async def go(ctx):
             driver.quit()
     except selenium.common.exceptions.NoSuchElementException:
         captchaquestion = driver.find_element_by_xpath("/html/body/div/form/div/span").get_attribute('textContent')
-        captchaquestion = captchaquestion.strip("   ")
+        captchaquestion1 = captchaquestion.strip("   ")
+        captchaquestion = captchaquestion1.strip("=")
         captchaquestionnumberlist = captchaquestion.split('+')
-        captchaanswer = captchaquestionnumberlist[0] + captchaquestionnumberlist[1]
+        print(captchaquestionnumberlist[0])
+        print(captchaquestionnumberlist[1])
+        captchaanswer = float(captchaquestionnumberlist[0]) + float(captchaquestionnumberlist[1])
         cinputelement = driver.find_element_by_xpath("/html/body/div/form/div/input[1]")
+        print(captchaanswer)
         cinputelement.send_keys(captchaanswer)
+        await asyncio.sleep(3)
         cinputelement.send_keys(Keys.ENTER)
         inputemail.send_keys(email)
         inputpassword.send_keys(password)
@@ -267,18 +274,10 @@ async def go(ctx):
         WalkerIDFound[DiscordID] = WalkerIDelement.get_attribute('textContent')
         TokenFound[DiscordID] = Tokenelement.get_attribute('textContent')
         try:
-            await ctx.channel.send("Found ID: "+WalkerIDFound[DiscordID])
-            await asyncio.sleep(1)
-            await ctx.channel.send("Found Token: "+TokenFound[DiscordID])
-            await asyncio.sleep(1)
-            await ctx.channel.send("Entered ID: "+WalkerID[DiscordID])
-            await asyncio.sleep(1)
-            await ctx.channel.send("Generated Token: "+client.commentToken[DiscordID])
-            await asyncio.sleep(1)
             TokenFound[DiscordID] = Tokenelement.get_attribute('textContent')
             if TokenFound[DiscordID] == client.commentToken[DiscordID] and WalkerIDFound[DiscordID] == str(WalkerID[DiscordID]):
                 await asyncio.sleep(2)
-                await ctx.channel.send("Verified.")
+                await ctx.channel.send("Verification completed, congrats!")
                 driver.quit()
                 role = get(member.guild.roles, name = verifiedrolename)
                 unrole = get(member.guild.roles, name = unverifiedrolename)
@@ -307,7 +306,7 @@ async def go(ctx):
             driver.quit()
 @commands.cooldown(1, 1, commands.BucketType.user)
 @client.command()
-async def ungo(ctx):
+async def unverify(ctx):
     member = ctx.author
     logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)
     role = get(member.guild.roles, name = verifiedrolename)
@@ -316,13 +315,14 @@ async def ungo(ctx):
     await member.remove_roles(role)
     await ctx.channel.send("Unverified.")
     current_time = datetime.utcnow()
-    embed=discord.Embed(title="Log: ungo", color=0x0400ff)
+    embed=discord.Embed(title="Log: unverify", color=0x0400ff)
     embed.add_field(name="Action: unverify", value=f"**User**: {ctx.author.name}#{ctx.author.discriminator} **Time**: {current_time} UTC", inline=True)
     try:
         await logchannel.send(embed = embed)
     except AttributeError:
         await ctx.channel.send(f"Unable to log this action, {member.guild.owner.mention}. Does the channel #{logchannelname} exist?")
-
+    except discord.errors.Forbidden:
+        await ctx.channel.send(f"{ctx.author.guild.owner.mention} I do not have permissions to add/remove roles and/or change {ctx.author.mention}'s nickname.")
 @commands.cooldown(1, 1, commands.BucketType.user)
 @client.command()
 @has_permissions(administrator=True)
@@ -330,6 +330,48 @@ async def lastverified(ctx):
     with open ('data.json','r') as f:
         content = json.load(f)
         await ctx.channel.send(content["walkerID"])
+@has_permissions(administrator=True)
+@client.command()
+async def forceverify(ctx, member: discord.Member):
+    current_time = datetime.utcnow()
+    WalkerID = {}
+    role = get(member.guild.roles, name = verifiedrolename)
+    unrole = get(member.guild.roles, name = unverifiedrolename)
+    DiscordID = member.id
+    logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)
+    WalkerID[DiscordID] = ctx.message.content[37:]
+    try:
+        WalkerIDnick = "#"+str(WalkerID[DiscordID])
+        await member.add_roles(role)
+        await member.remove_roles(unrole)
+        await member.edit(nick=WalkerIDnick)
+    except discord.errors.Forbidden:
+        await ctx.channel.send(f"{ctx.author.guild.owner.mention} I do not have permissions to add/remove roles and/or change {ctx.author.mention}'s nickname.")
+    embed=discord.Embed(title=f"Log: forceverify {WalkerIDnick}", color=0x0400ff)
+    embed.add_field(name="Action: forceverify", value=f"**User**: {ctx.author.name}#{ctx.author.discriminator} **Time**: {current_time} UTC", inline=True)
+    try:
+        await logchannel.send(embed = embed)
+    except AttributeError:
+        await ctx.channel.send(f"Unable to log this action, {member.guild.owner.mention}. Does the channel #{logchannelname} exist?")
+
+@has_permissions(administrator=True)
+@client.command()
+async def forceunverify(ctx, member: discord.Member):
+    current_time = datetime.utcnow()
+    role = get(member.guild.roles, name = verifiedrolename)
+    unrole = get(member.guild.roles, name = unverifiedrolename)
+    logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)
+    try:
+        await member.add_roles(unrole)
+        await member.remove_roles(role)
+    except discord.errors.Forbidden:
+        await ctx.channel.send(f"{ctx.author.guild.owner.mention} I do not have permissions to add/remove roles and/or change {ctx.author.mention}'s nickname.")
+    embed=discord.Embed(title=f"Log: forceunverify", color=0x0400ff)
+    embed.add_field(name="Action: forceunverify", value=f"**User**: {ctx.author.name}#{ctx.author.discriminator} **Time**: {current_time} UTC", inline=True)
+    try:
+        await logchannel.send(embed = embed)
+    except AttributeError:
+        await ctx.channel.send(f"Unable to log this action, {member.guild.owner.mention}. Does the channel #{logchannelname} exist?")
 
 @client.event
 async def on_guild_join(guild):
@@ -341,7 +383,7 @@ async def on_member_join(member):
     channel = discord.utils.get(member.guild.text_channels, name = verificationchannelname)
     await member.add_roles(unrole)
     try:
-        await channel.send(f"Hey {member.mention}, welcome to **{member.guild.name}**, please type `$verify` to get started on your verification process.")
+        await channel.send(f"Welcome{member.mention}. The **{member.guild.name}**server is dedicated to Walkers with an official ID. I'm your friendly verification bot to help you to authorize yourself, getting access to all the Walkers channels on this server in return, please type `$verify` to get started on your verification process.")
     except AttributeError:
         await random.choice(member.guild.text_channels).send(f"Hey {member.mention}, welcome to **{member.guild.name}**, please type `$verify` to get started on your verification process.")
 client.run(token)

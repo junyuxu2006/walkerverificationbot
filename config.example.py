@@ -14,4 +14,5 @@ configs = {\
 'Invitelink' : 'Invite link for the bot',\
 'verificationchannelname' : 'verification',\
 'logchannelname' : 'verification-bot-log',\
+'generalchannelname' : 'general',\
 }

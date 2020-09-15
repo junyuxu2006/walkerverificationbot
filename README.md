@@ -19,4 +19,3 @@ dependencies: discord, discord.py, selenium, time, secrets.
 
 Known issues: 
 1. sometimes, the site requires a prove your humanity captcha (This will be fixed and the captcha will be done automatically)
-2. running $go before running $verify causes the program to crash.

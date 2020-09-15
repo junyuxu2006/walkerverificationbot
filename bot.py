@@ -144,6 +144,8 @@ async def help(ctx):
     embed.add_field(name=f"{prefix}sourcecode", value="The command you type to make the bot show its source code.")
     embed.add_field(name=f"{prefix}about", value="The command you type to make me say who I am!")
     embed.add_field(name=f"{prefix}servercount", value="The command you type for me to show how many servers I'm in!")
+    embed.add_field(name=f"{prefix}serverinvite", value="The command you type for me to invite you to my official server!")
+    embed.add_field(name=f"{prefix}donate", value="The command you type to donate for the development of this bot!")
     embed.set_footer(text="Noice")
     await ctx.channel.send(embed=embed)
     logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)
@@ -382,12 +384,19 @@ async def sourcecode(ctx):
 
 @client.command()
 async def about(ctx):
-    await ctx.channel.send("This bot is the ONLY open source, support for all ids, and multi-server compatible Walker verification bot for discord.")
+    await ctx.channel.send("This bot is the ONLY open source, support for all ids, and multi-server compatible Walker verification bot for walker discord servers.")
 
 @client.command()
 async def servercount(ctx):
     await ctx.channel.send(f"I'm in {str(len(client.guilds)) } servers!")
 
+@client.command()
+async def serverinvite(ctx):
+    await ctx.channel.send("Invite for the Green Nexus Walker verification bot official server: https://discord.gg/JhZ6gCw")
+
+@client.command()
+async def donate(ctx):
+    await ctx.channel.send("https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=SQA2T7K5ACTPJ&item_name=GreenNexusBotSupport&currency_code=USD&source=url")
 @client.event
 async def on_guild_join(guild):
     await random.choice(guild.text_channels).send(f'{guild.owner.mention} Thanks for adding me. In order for me to properly function, make sure you have a role named "{verifiedrolename}" and "{unverifiedrolename}", and make sure my role is above them. Your server must have a channel  that I can send messages that is named {verificationchannelname}, {logchannelname}, and {generalchannelname}.')
@@ -398,7 +407,7 @@ async def on_member_join(member):
     channel = discord.utils.get(member.guild.text_channels, name = verificationchannelname)
     await member.add_roles(unrole)
     try:
-        await channel.send(f"Welcome{member.mention}. The **{member.guild.name}**server is dedicated to Walkers with an official ID. I'm your friendly verification bot to help you to authorize yourself, getting access to all the Walkers channels on this server in return, please type `{prefix}verify` to get started on your verification process.")
+        await channel.send(f"Welcome{member.mention}. The **{member.guild.name}** server is dedicated to Walkers with an official ID. I'm your friendly verification bot to help you to authorize yourself, getting access to all the Walkers channels on this server in return, please type `{prefix}verify` to get started on your verification process.")
     except AttributeError:
         await random.choice(member.guild.text_channels).send(f"Hey {member.mention}, welcome to **{member.guild.name}**, please type `{prefix}verify` to get started on your verification process.")
 client.run(token)

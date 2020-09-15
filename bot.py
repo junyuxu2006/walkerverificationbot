@@ -52,19 +52,19 @@ async def on_ready():
     print('We have logged in as {0.user}'.format(client))
     loggedin = 1
     while (loggedin == 1):
-        activity = discord.Game(name="$help | We Are Unity", type=3)
+        activity = discord.Game(name=f"{prefix}help | We Are Unity", type=3)
         await client.change_presence(activity=activity)
         await asyncio.sleep(10)
-        activity = discord.Game(name="$help | Walkers are best friends", type=3)
+        activity = discord.Game(name=f"{prefix}help | Walkers are best friends", type=3)
         await client.change_presence(activity=activity)
         await asyncio.sleep(10)
-        activity = discord.Game(name="$help | Stop hater Walkers", type=3)
+        activity = discord.Game(name=f"{prefix}help | Stop hater Walkers", type=3)
         await client.change_presence(activity=activity)
         await asyncio.sleep(10)
-        activity = discord.Game(name="$help | Maintain Peace and Unity", type=3)
+        activity = discord.Game(name=f"{prefix}help | Maintain Peace and Unity", type=3)
         await client.change_presence(activity=activity)
         await asyncio.sleep(10)
-        activity = discord.Game(name="$help | Stop Separatism", type=3)
+        activity = discord.Game(name=f"{prefix}help | Stop Separatism", type=3)
         await client.change_presence(activity=activity)
         await asyncio.sleep(10)
 
@@ -86,7 +86,7 @@ async def verify(ctx):
     client.commentToken = {}
     client.commentToken[DiscordID] = token[:8] + secrets.token_urlsafe(6) + token[8:]
     stringToken = str(client.commentToken[DiscordID])
-    await ctx.channel.send("NOTE: This discord bot is **still in development, if you experience errors, please contact Walker #7416.** Please make a comment on the following post exactly as the token below. Then, type `$go WalkerID(NO #)`, where WalkerID is YOUR OWN WALKER ID. **IF the bot doesn't respond in 10 seconds to the command `$go`, there is a problem and you should contact #7416, if it takes a bit longer to respond, then that's completely normal.**"+" <"+str(commenturl) + "> ")
+    await ctx.channel.send(f"NOTE: This discord bot is **still in development, if you experience errors, please contact Walker #7416.** Please make a comment on the following post exactly as the token below. Then, type `{prefix}go WalkerID(NO #)`, where WalkerID is YOUR OWN WALKER ID. **IF the bot doesn't respond in 10 seconds to the command `{prefix}go`, there is a problem and you should contact #7416, if it takes a bit longer to respond, then that's completely normal.**"+" <"+str(commenturl) + "> ")
     await ctx.channel.send("copy the token below and paste it in the comments section of the post.")
     await ctx.channel.send(stringToken)
     logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)
@@ -131,18 +131,19 @@ async def invite(ctx):
 async def help(ctx):
     member = ctx.author
     embed=discord.Embed(title="Help", color=0x0400ff)
-    embed.add_field(name="$help", value="shows this message.", inline=True)
-    embed.add_field(name="$invite", value="Invite link for the bot.", inline=True)
-    embed.add_field(name="$hello", value="Bot will say Hello.", inline=True)
-    embed.add_field(name="$verify", value="Shows instructions for verification, and generates a token to comment on.", inline=True)
-    embed.add_field(name="$go", value="The command you type followed by your Walker ID for comment checking purposes.", inline=True)
-    embed.add_field(name="$unverify", value="The command you type to unverify.", inline=True)
-    embed.add_field(name="$say", value="The command you type followed by your desired message to make the bot say that.", inline=True)
-    embed.add_field(name="$lastverified", value="The command you type to show the last couple users with the user ID and Walker ID, **Admins only**", inline=True)
-    embed.add_field(name="$forceverify", value="The command you type to forcefully verify a user followed by a user mention and walker id with space between. **Admins only**")
-    embed.add_field(name="$forceunverify", value="The command you type to forcefully unverify a user followed by a user mention. **Admins only**")
-    embed.add_field(name="$sourcecode", value="The command you type to make the bot show its source code.")
-    embed.add_field(name="$about", value="The command you type to make me say who I am!")
+    embed.add_field(name=f"{prefix}help", value="shows this message.", inline=True)
+    embed.add_field(name=f"{prefix}invite", value="Invite link for the bot.", inline=True)
+    embed.add_field(name=f"{prefix}hello", value="Bot will say Hello.", inline=True)
+    embed.add_field(name=f"{prefix}verify", value="Shows instructions for verification, and generates a token to comment on.", inline=True)
+    embed.add_field(name=f"{prefix}go", value="The command you type followed by your Walker ID for comment checking purposes.", inline=True)
+    embed.add_field(name=f"{prefix}unverify", value="The command you type to unverify.", inline=True)
+    embed.add_field(name=f"{prefix}say", value="The command you type followed by your desired message to make the bot say that.", inline=True)
+    embed.add_field(name=f"{prefix}lastverified", value="The command you type to show the last couple users with the user ID and Walker ID, **Admins only**", inline=True)
+    embed.add_field(name=f"{prefix}forceverify", value="The command you type to forcefully verify a user followed by a user mention and walker id with space between. **Admins only**")
+    embed.add_field(name=f"{prefix}forceunverify", value="The command you type to forcefully unverify a user followed by a user mention. **Admins only**")
+    embed.add_field(name=f"{prefix}sourcecode", value="The command you type to make the bot show its source code.")
+    embed.add_field(name=f"{prefix}about", value="The command you type to make me say who I am!")
+    embed.add_field(name=f"{prefix}servercount", value="The command you type for me to show how many servers I'm in!")
     embed.set_footer(text="Noice")
     await ctx.channel.send(embed=embed)
     logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)
@@ -164,7 +165,7 @@ async def say (ctx):
     except AttributeError:
         await ctx.channel.send("This command does not support DM.")
     except discord.errors.HTTPException:
-        await ctx.channel.send("What are you making me say? include it after `$say`!")
+        await ctx.channel.send(f"What are you making me say? include it after `{prefix}say`!")
     logchannel = discord.utils.get(ctx.author.guild.text_channels, name = logchannelname)
     current_time = datetime.utcnow()
     embed=discord.Embed(title="Log: say", color=0x0400ff)
@@ -242,13 +243,13 @@ async def go(ctx):
                 await ctx.channel.send("Could not find your comment, if you did comment, please make sure you commented the token below the link and you entered the correct Walker ID.")
                 driver.quit()
         except KeyError:
-            await ctx.channel.send("An error occured, try again now with `$verify`. This is most likely caused by someone running this command on this bot at the same time as you.")
+            await ctx.channel.send(f"An error occured, try again now with `{prefix}verify`. This is most likely caused by someone running this command on this bot at the same time as you.")
             driver.quit()
         except selenium.common.exceptions.NoSuchElementException:
-            await ctx.channel.send("An error occured. You may have to wait a while for this error to be fixed, but in most cases, trying again with `$verify` will fix the problem.")
+            await ctx.channel.send(f"An error occured. You may have to wait a while for this error to be fixed, but in most cases, trying again with `{prefix}verify` will fix the problem.")
             driver.quit()
         except IndexError:
-            await ctx.channel.send("An error occured, try again now with `$verify`, then `$go`. This is most likely caused by you trying to put a text, nothing after, unmatched ID, or your Walker ID with the # without running `$verify`, which is invalid, retrying with the correct usage might fix the problem.")
+            await ctx.channel.send(f"An error occured, try again now with `{prefix}verify`, then `{prefix}go`. This is most likely caused by you trying to put a text, nothing after, unmatched ID, or your Walker ID with the # without running `{prefix}verify`, which is invalid, retrying with the correct usage might fix the problem.")
             driver.quit()
     except selenium.common.exceptions.NoSuchElementException:
         captchaquestion = driver.find_element_by_xpath("/html/body/div/form/div/span").get_attribute('textContent')
@@ -298,13 +299,13 @@ async def go(ctx):
                 await ctx.channel.send("Could not find your comment, if you did comment, please make sure you commented the token in the black box below the link and you entered the correct Walker ID.")
                 driver.quit()
         except KeyError:
-            await ctx.channel.send("An error occured, try again now with `$verify`. This is most likely caused by someone running this command on this bot at the same time as you.")
+            await ctx.channel.send(f"An error occured, try again now with `{prefix}verify`. This is most likely caused by someone running this command on this bot at the same time as you.")
             driver.quit()
         except selenium.common.exceptions.NoSuchElementException:
-            await ctx.channel.send("An error occured. You may have to wait a while for this error to be fixed, but in most cases, trying again with `$verify` will fix the problem.")
+            await ctx.channel.send(f"An error occured. You may have to wait a while for this error to be fixed, but in most cases, trying again with `{prefix}verify` will fix the problem.")
             driver.quit()
         except IndexError:
-            await ctx.channel.send("An error occured, try again now with `$verify`, then `$go`. This is most likely caused by you trying to put a text, nothing after, unmatched ID, or your Walker ID with the # without running `$verify`, which is invalid, retrying with the correct usage might fix the problem.")
+            await ctx.channel.send(f"An error occured, try again now with `{prefix}verify`, then `{prefix}go`. This is most likely caused by you trying to put a text, nothing after, unmatched ID, or your Walker ID with the # without running `{prefix}verify`, which is invalid, retrying with the correct usage might fix the problem.")
             driver.quit()
 @commands.cooldown(1, 1, commands.BucketType.user)
 @client.command()
@@ -382,6 +383,11 @@ async def sourcecode(ctx):
 @client.command()
 async def about(ctx):
     await ctx.channel.send("This bot is the ONLY open source, support for all ids, and multi-server compatible Walker verification bot for discord.")
+
+@client.command()
+async def servercount(ctx):
+    await ctx.channel.send(f"I'm in {str(len(client.guilds)) } servers!")
+
 @client.event
 async def on_guild_join(guild):
     await random.choice(guild.text_channels).send(f'{guild.owner.mention} Thanks for adding me. In order for me to properly function, make sure you have a role named "{verifiedrolename}" and "{unverifiedrolename}", and make sure my role is above them. Your server must have a channel  that I can send messages that is named {verificationchannelname}, {logchannelname}, and {generalchannelname}.')
@@ -392,7 +398,7 @@ async def on_member_join(member):
     channel = discord.utils.get(member.guild.text_channels, name = verificationchannelname)
     await member.add_roles(unrole)
     try:
-        await channel.send(f"Welcome{member.mention}. The **{member.guild.name}**server is dedicated to Walkers with an official ID. I'm your friendly verification bot to help you to authorize yourself, getting access to all the Walkers channels on this server in return, please type `$verify` to get started on your verification process.")
+        await channel.send(f"Welcome{member.mention}. The **{member.guild.name}**server is dedicated to Walkers with an official ID. I'm your friendly verification bot to help you to authorize yourself, getting access to all the Walkers channels on this server in return, please type `{prefix}verify` to get started on your verification process.")
     except AttributeError:
-        await random.choice(member.guild.text_channels).send(f"Hey {member.mention}, welcome to **{member.guild.name}**, please type `$verify` to get started on your verification process.")
+        await random.choice(member.guild.text_channels).send(f"Hey {member.mention}, welcome to **{member.guild.name}**, please type `{prefix}verify` to get started on your verification process.")
 client.run(token)

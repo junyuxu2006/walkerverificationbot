@@ -141,6 +141,8 @@ async def help(ctx):
     embed.add_field(name="$lastverified", value="The command you type to show the last couple users with the user ID and Walker ID, **Admins only**", inline=True)
     embed.add_field(name="$forceverify", value="The command you type to forcefully verify a user followed by a user mention and walker id with space between. **Admins only**")
     embed.add_field(name="$forceunverify", value="The command you type to forcefully unverify a user followed by a user mention. **Admins only**")
+    embed.add_field(name="$sourcecode", value="The command you type to make the bot show its source code.")
+    embed.add_field(name="$about", value="The command you type to make me say who I am!")
     embed.set_footer(text="Noice")
     await ctx.channel.send(embed=embed)
     logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)
@@ -373,6 +375,13 @@ async def forceunverify(ctx, member: discord.Member):
     except AttributeError:
         await ctx.channel.send(f"Unable to log this action, {member.guild.owner.mention}. Does the channel #{logchannelname} exist?")
 
+@client.command()
+async def sourcecode(ctx):
+    await ctx.channel.send("here's the code! https://github.com/junyuxu2006/walkerverificationbot/")
+
+@client.command()
+async def about(ctx):
+    await ctx.channel.send("This bot is the ONLY open source, support for all ids, and multi-server compatible Walker verification bot for discord.")
 @client.event
 async def on_guild_join(guild):
     await random.choice(guild.text_channels).send(f'{guild.owner.mention} Thanks for adding me. In order for me to properly function, make sure you have a role named "{verifiedrolename}" and "{unverifiedrolename}", and make sure my role is above them. Your server must have a channel  that I can send messages that is named {verificationchannelname}, {logchannelname}, and {generalchannelname}.')

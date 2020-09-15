@@ -21,6 +21,9 @@ from discord.ext import commands
 from discord.utils import get
 import asyncio
 from datetime import datetime
+import json
+from discord.ext.commands import CommandOnCooldown
+
 PATH = configs['PATH']
 link = configs['link']
 email = configs['email']
@@ -36,7 +39,7 @@ commenturl = configs['commenturl']
 token = configs['token']
 verifiedrole = configs['verifiedrolename']
 controlchannelname = configs['controlchannelname']
-
+generalchannelname = configs['generalchannelname']
 
 client.remove_command('help')
 client.commentToken = ""
@@ -69,6 +72,8 @@ async def on_ready():
 async def on_command_error(ctx, error):
     if isinstance(error, commands.MissingPermissions):
         await ctx.channel.send("Insufficient permissions!")
+    if isinstance(error, commands.CommandOnCooldown):
+        await ctx.channel.send("Command is on cooldown!")
 
 @commands.cooldown(1, 1, commands.BucketType.user)
 @client.command()
@@ -81,7 +86,7 @@ async def verify(ctx):
     client.commentToken = {}
     client.commentToken[DiscordID] = token[:8] + secrets.token_urlsafe(6) + token[8:]
     stringToken = str(client.commentToken[DiscordID])
-    await ctx.channel.send("NOTE: This discord bot is **still in development, if you experience errors, please contact Walker #7416.** Please make a comment on the following post exactly as the token below. Then, type `$go WalkerID(NO #)`, where WalkerID is YOUR OWN WALKER ID."+" <"+str(commenturl) + "> ")
+    await ctx.channel.send("NOTE: This discord bot is **still in development, if you experience errors, please contact Walker #7416.** Please make a comment on the following post exactly as the token below. Then, type `$go WalkerID(NO #)`, where WalkerID is YOUR OWN WALKER ID. **IF the bot doesn't respond in 10 seconds to the command `$go`, there is a problem and you should contact #7416, if it takes a bit longer to respond, then that's completely normal.**"+" <"+str(commenturl) + "> ")
     await ctx.channel.send("copy the token below and paste it in the comments section of the post.")
     await ctx.channel.send(stringToken)
     logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)
@@ -146,7 +151,6 @@ async def help(ctx):
         await ctx.channel.send(f"Unable to log this action, {member.guild.owner.mention}. Does the channel {logchannelname} exist?")
 
 @commands.cooldown(1, 1, commands.BucketType.user)
-@has_permissions(administrator=True)
 @client.command()
 async def say (ctx):
     try:
@@ -206,34 +210,32 @@ async def go(ctx):
     WalkerIDFound[DiscordID] = WalkerIDelement.get_attribute('textContent')
     TokenFound[DiscordID] = Tokenelement.get_attribute('textContent')
     try:
-        await ctx.channel.send("Found ID: "+WalkerIDFound[DiscordID])
-        await asyncio.sleep(1)
-        await ctx.channel.send("Found Token: "+TokenFound[DiscordID])
-        await asyncio.sleep(1)
-        await ctx.channel.send("Entered ID: "+WalkerID[DiscordID])
-        await asyncio.sleep(1)
-        await ctx.channel.send("Generated Token: "+client.commentToken[DiscordID])
-        await asyncio.sleep(1)
         TokenFound[DiscordID] = Tokenelement.get_attribute('textContent')
         if TokenFound[DiscordID] == client.commentToken[DiscordID] and WalkerIDFound[DiscordID] == str(WalkerID[DiscordID]):
-            await asyncio.sleep(2)
             await ctx.channel.send("Verified.")
             driver.quit()
             role = get(member.guild.roles, name = verifiedrolename)
             unrole = get(member.guild.roles, name = unverifiedrolename)
             WalkerIDnick = "#"+str(WalkerID[DiscordID])
-            with open ('data.walkerdata','a') as f:
-                f.write(str(WalkerID))
+            WalkerIDdict = {"walkerID": WalkerID}
+            generalchannel= discord.utils.get(member.guild.text_channels, name = generalchannelname)
+            with open ('data.json','r+') as f:
+                json.dump(WalkerIDdict, f)
             try:
                 await member.add_roles(role)
                 await member.remove_roles(unrole)
                 await member.edit(nick=WalkerIDnick)
             except discord.errors.Forbidden:
                 await ctx.channel.send(f"{ctx.author.guild.owner.mention} I do not have permissions to add/remove roles and/or change {ctx.author.mention}'s nickname.")
+            try:
+                await generalchannel.send(f"Walker {WalkerIDnick} has joined, Welcome!")
+            except AttributeError:
+                await ctx.channel.send(f"{ctx.author.guild.owner.mention} I could not find the channel {generalchannelname}, in order for the bot to work properly, please add a channel with that name.")
+                await random.choice(ctx.author.guild.text_channels).send(f"Walker {WalkerIDnick} has joined, Welcome!")
             print(DiscordID)  
         else:
             await asyncio.sleep(2)
-            await ctx.channel.send("Could not find your comment, if you did comment, please make sure you commented the token in the black box below the link and you entered the correct Walker ID.")
+            await ctx.channel.send("Could not find your comment, if you did comment, please make sure you commented the token below the link and you entered the correct Walker ID.")
             driver.quit()
     except KeyError:
         await ctx.channel.send("An error occured, try again now with `$verify`. This is most likely caused by someone running this command on this bot at the same time as you.")
@@ -267,14 +269,13 @@ async def ungo(ctx):
 @client.command()
 @has_permissions(administrator=True)
 async def lastverified(ctx):
-    with open ('data.walkerdata','r') as f:
-        f_contents = f.read()
-        f_contents = f_contents.replace("{", " ").replace("}", " ")
-        await ctx.channel.send(str(f_contents))
+    with open ('data.json','r') as f:
+        content = json.load(f)
+        await ctx.channel.send(content["walkerID"])
 
 @client.event
 async def on_guild_join(guild):
-    await random.choice(guild.text_channels).send(f'{guild.owner.mention} Thanks for adding me. In order for me to properly function, make sure you have a role named "'+verifiedrolename+'" and "'+unverifiedrolename+'", and make sure my role is above them. Your server must have a channel  that I can send messages that is named "'+verificationchannelname+'" and"'+logchannelname+'"'+'.')
+    await random.choice(guild.text_channels).send(f'{guild.owner.mention} Thanks for adding me. In order for me to properly function, make sure you have a role named "{verifiedrolename}" and "{unverifiedrolename}", and make sure my role is above them. Your server must have a channel  that I can send messages that is named {verificationchannelname}, {logchannelname}, and {generalchannelname}.')
 
 @client.event
 async def on_member_join(member):

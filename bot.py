@@ -294,7 +294,6 @@ async def go(ctx):
                 unrole = get(member.guild.roles, name = unverifiedrolename)
                 WalkerIDnick = "#"+str(WalkerID[DiscordID])
                 mydict = { "WalkerID": WalkerID[DiscordID], "DiscordID": DiscordID }
-                global x
                 x = mycol.insert_one(mydict)
                 try:
                     await member.add_roles(role)

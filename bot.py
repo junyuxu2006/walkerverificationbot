@@ -23,6 +23,7 @@ import asyncio
 from datetime import datetime
 import json
 from discord.ext.commands import CommandOnCooldown
+import urllib.request as req
 PATH = configs['PATH']
 link = configs['link']
 email = configs['email']
@@ -39,6 +40,7 @@ token = configs['token']
 verifiedrole = configs['verifiedrolename']
 controlchannelname = configs['controlchannelname']
 generalchannelname = configs['generalchannelname']
+url = configs['url']
 
 client.remove_command('help')
 client.commentToken = ""
@@ -211,13 +213,9 @@ async def go(ctx):
     inputpassword.send_keys(Keys.ENTER)
     WalkerID[DiscordID] = ctx.message.content[4:]
     print(WalkerID[DiscordID])
-    #xpathWalkerID = str("//*[contains(text(), '"+WalkerID+"'"+")]")
-    #xpathToken = str("//*[contains(text(), '"+client.commentToken+"'"+")]")
     try:
         WalkerIDelement = driver.find_element_by_xpath("/html/body/div[5]/div/div[1]/main/section/ul/li[last()]/div/div[1]/a/span")
-        #driver.find_elements_by_class_name("wid")
         Tokenelement = driver.find_element_by_xpath("/html/body/div[5]/div/div[1]/main/section/ul/li[last()]/div/p")
-        #driver.find_elements_by_class_name("comment-author vcard")
         WalkerIDFound = {}
         TokenFound = {}
         WalkerIDFound[DiscordID] = WalkerIDelement.get_attribute('textContent')
@@ -260,39 +258,27 @@ async def go(ctx):
             await ctx.channel.send(f"An error occured, try again now with `{prefix}verify`, then `{prefix}go`. This is most likely caused by you trying to put a text, nothing after, unmatched ID, or your Walker ID with the # without running `{prefix}verify`, which is invalid, retrying with the correct usage might fix the problem.")
             driver.quit()
     except selenium.common.exceptions.NoSuchElementException:
-        captchaquestion = driver.find_element_by_xpath("/html/body/div/form/div/span").get_attribute('textContent')
-        captchaquestion1 = captchaquestion.strip("   ")
-        captchaquestion = captchaquestion1.strip("=")
-        captchaquestionnumberlist = captchaquestion.split('+')
-        print(captchaquestionnumberlist[0])
-        print(captchaquestionnumberlist[1])
-        captchaanswer = float(captchaquestionnumberlist[0]) + float(captchaquestionnumberlist[1])
-        cinputelement = driver.find_element_by_xpath("/html/body/div/form/div/input[1]")
-        print(captchaanswer)
-        cinputelement.send_keys(captchaanswer)
-        await asyncio.sleep(3)
-        cinputelement.send_keys(Keys.ENTER)
-        inputemail.send_keys(email)
-        inputpassword.send_keys(password)
-        inputpassword.send_keys(Keys.ENTER)
-        driver.get(link)
-        WalkerIDelement = driver.find_element_by_xpath("/html/body/div[5]/div/div[1]/main/section/ul/li[last()]/div/div[1]/a/span")
-        #driver.find_elements_by_class_name("wid")
-        Tokenelement = driver.find_element_by_xpath("/html/body/div[5]/div/div[1]/main/section/ul/li[last()]/div/p")
-        #driver.find_elements_by_class_name("comment-author vcard")
-        WalkerIDFound = {}
-        TokenFound = {}
-        WalkerIDFound[DiscordID] = WalkerIDelement.get_attribute('textContent')
-        TokenFound[DiscordID] = Tokenelement.get_attribute('textContent')
+        commentCounter = 0
+        with req.urlopen(url) as response: #get the string from API
+                data = json.load(response)
         try:
-            TokenFound[DiscordID] = Tokenelement.get_attribute('textContent')
+            commentAuthor = data[commentCounter]['author']
+            commentAuthorName = int(data[commentCounter]['author_name'])
+            TokenFound = data[commentCounter]['content']['rendered'][3:25] #cut out the keyEnter
+            print(f'commentAuthor: {commentAuthor}')
+            print(f'commentAuthorName: {commentAuthorName}')
+            print(f'TokenFound: {TokenFound}')
+            if int(commentAuthorName) >= 50:
+                        WalkerID[DiscordID] = commentAuthorName
+            else:
+                        WalkerID[DiscordID] = commentAuthor
             if TokenFound[DiscordID] == client.commentToken[DiscordID] and WalkerIDFound[DiscordID] == str(WalkerID[DiscordID]):
-                await asyncio.sleep(2)
                 await ctx.channel.send("Verification completed, congrats!")
                 driver.quit()
                 role = get(member.guild.roles, name = verifiedrolename)
                 unrole = get(member.guild.roles, name = unverifiedrolename)
                 WalkerIDnick = "#"+str(WalkerID[DiscordID])
+                generalchannel= discord.utils.get(member.guild.text_channels, name = generalchannelname)
                 mydict = { "WalkerID": WalkerID[DiscordID], "DiscordID": DiscordID }
                 x = mycol.insert_one(mydict)
                 try:
@@ -301,20 +287,23 @@ async def go(ctx):
                     await member.edit(nick=WalkerIDnick)
                 except discord.errors.Forbidden:
                     await ctx.channel.send(f"{ctx.author.guild.owner.mention} I do not have permissions to add/remove roles and/or change {ctx.author.mention}'s nickname.")
+                try:
+                    await generalchannel.send(f"Walker {WalkerIDnick} has joined, Welcome!")
+                except AttributeError:
+                    await ctx.channel.send(f"{ctx.author.guild.owner.mention} I could not find the channel {generalchannelname}, in order for the bot to work properly, please add a channel with that name.")
+                    await random.choice(ctx.author.guild.text_channels).send(f"Walker {WalkerIDnick} has joined, Welcome!")
                 print(DiscordID)  
             else:
                 await asyncio.sleep(2)
-                await ctx.channel.send("Could not find your comment, if you did comment, please make sure you commented the token in the black box below the link and you entered the correct Walker ID.")
+                await ctx.channel.send("Could not find your comment, if you did comment, please make sure you commented the token below the link and you entered the correct Walker ID.")
                 driver.quit()
         except KeyError:
             await ctx.channel.send(f"An error occured, try again now with `{prefix}verify`. This is most likely caused by someone running this command on this bot at the same time as you.")
             driver.quit()
-        except selenium.common.exceptions.NoSuchElementException:
-            await ctx.channel.send(f"An error occured. You may have to wait a while for this error to be fixed, but in most cases, trying again with `{prefix}verify` will fix the problem.")
-            driver.quit()
         except IndexError:
             await ctx.channel.send(f"An error occured, try again now with `{prefix}verify`, then `{prefix}go`. This is most likely caused by you trying to put a text, nothing after, unmatched ID, or your Walker ID with the # without running `{prefix}verify`, which is invalid, retrying with the correct usage might fix the problem.")
             driver.quit()
+
 @commands.cooldown(1, 1, commands.BucketType.user)
 @client.command()
 async def unverify(ctx):
@@ -411,7 +400,7 @@ async def donate(ctx):
     await ctx.channel.send("https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=SQA2T7K5ACTPJ&item_name=GreenNexusBotSupport&currency_code=USD&source=url")
 @client.command()
 async def website(ctx):
-    await ctx.channel.send("https://w41k3rdiscord.junyuxu.com/greennexus")
+    await ctx.channel.send("https://greennexus.junyuxu.com/index")
 
 @client.event
 async def on_guild_join(guild):

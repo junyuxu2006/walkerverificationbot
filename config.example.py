@@ -15,4 +15,5 @@ configs = {\
 'verificationchannelname' : 'verification',\
 'logchannelname' : 'verification-bot-log',\
 'generalchannelname' : 'general',\
+'url' : 'URL to the wordpress API link to comments for accessing comments',\
 }

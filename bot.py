@@ -46,6 +46,12 @@ client.commentToken = ""
 WalkerIDFound = {}
 TokenFound = {}
 
+import pymongo
+
+myclient = pymongo.MongoClient("mongodb://localhost:27017/")
+mydb = myclient["mydatabase"]
+mycol = mydb["verifiedusers"]
+
 @client.event
 async def on_ready():
     print('We have logged in as {0.user}'.format(client))
@@ -224,10 +230,10 @@ async def go(ctx):
                 role = get(member.guild.roles, name = verifiedrolename)
                 unrole = get(member.guild.roles, name = unverifiedrolename)
                 WalkerIDnick = "#"+str(WalkerID[DiscordID])
-                WalkerIDdict = {"walkerID": WalkerID}
                 generalchannel= discord.utils.get(member.guild.text_channels, name = generalchannelname)
-                with open ('data.json','r+') as f:
-                    json.dump(WalkerIDdict, f)
+                mydict = { "WalkerID": WalkerID[DiscordID], "DiscordID": DiscordID }
+                global x
+                x = mycol.insert_one(mydict)
                 try:
                     await member.add_roles(role)
                     await member.remove_roles(unrole)
@@ -287,8 +293,9 @@ async def go(ctx):
                 role = get(member.guild.roles, name = verifiedrolename)
                 unrole = get(member.guild.roles, name = unverifiedrolename)
                 WalkerIDnick = "#"+str(WalkerID[DiscordID])
-                with open ('data.walkerdata','a') as f:
-                    f.write(str(WalkerID))
+                mydict = { "WalkerID": WalkerID[DiscordID], "DiscordID": DiscordID }
+                global x
+                x = mycol.insert_one(mydict)
                 try:
                     await member.add_roles(role)
                     await member.remove_roles(unrole)
@@ -332,9 +339,8 @@ async def unverify(ctx):
 @client.command()
 @has_permissions(administrator=True)
 async def lastverified(ctx):
-    with open ('data.json','r') as f:
-        content = json.load(f)
-        await ctx.channel.send(content["walkerID"])
+        x = mycol.find_one()
+        await ctx.channel.send(str(x)[46:-1])
 @has_permissions(administrator=True)
 @client.command()
 async def forceverify(ctx, member: discord.Member):
@@ -345,10 +351,10 @@ async def forceverify(ctx, member: discord.Member):
     DiscordID = member.id
     logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)
     WalkerID[DiscordID] = ctx.message.content[37:]
-    WalkerIDdict = {"walkerID": WalkerID}
     generalchannel= discord.utils.get(member.guild.text_channels, name = generalchannelname)
-    with open ('data.json','r+') as f:
-                    json.dump(WalkerIDdict, f)
+    mydict = { "WalkerID": WalkerID[DiscordID], "DiscordID": DiscordID }
+    global x
+    x = mycol.insert_one(mydict)
     try:
         await ctx.channel.send("Verification completed, congrats!")
         WalkerIDnick = "#"+str(WalkerID[DiscordID])

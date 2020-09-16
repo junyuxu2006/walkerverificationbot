@@ -23,7 +23,6 @@ import asyncio
 from datetime import datetime
 import json
 from discord.ext.commands import CommandOnCooldown
-
 PATH = configs['PATH']
 link = configs['link']
 email = configs['email']
@@ -135,9 +134,9 @@ async def help(ctx):
     embed.add_field(name=f"{prefix}invite", value="Invite link for the bot.", inline=True)
     embed.add_field(name=f"{prefix}hello", value="Bot will say Hello.", inline=True)
     embed.add_field(name=f"{prefix}verify", value="Shows instructions for verification, and generates a token to comment on.", inline=True)
-    embed.add_field(name=f"{prefix}go", value="The command you type followed by your Walker ID for comment checking purposes.", inline=True)
+    embed.add_field(name=f"{prefix}go", value="The command you type followed by your Walker ID for comment checking purposes. **Does not support DM**", inline=True)
     embed.add_field(name=f"{prefix}unverify", value="The command you type to unverify.", inline=True)
-    embed.add_field(name=f"{prefix}say", value="The command you type followed by your desired message to make the bot say that.", inline=True)
+    embed.add_field(name=f"{prefix}say", value="The command you type followed by your desired message to make the bot say that. **Does not support DM**", inline=True)
     embed.add_field(name=f"{prefix}lastverified", value="The command you type to show the last couple users with the user ID and Walker ID, **Admins only**", inline=True)
     embed.add_field(name=f"{prefix}forceverify", value="The command you type to forcefully verify a user followed by a user mention and walker id with space between. **Admins only**")
     embed.add_field(name=f"{prefix}forceunverify", value="The command you type to forcefully unverify a user followed by a user mention. **Admins only**")
@@ -146,6 +145,7 @@ async def help(ctx):
     embed.add_field(name=f"{prefix}servercount", value="The command you type for me to show how many servers I'm in!")
     embed.add_field(name=f"{prefix}serverinvite", value="The command you type for me to invite you to my official server!")
     embed.add_field(name=f"{prefix}donate", value="The command you type to donate for the development of this bot!")
+    embed.add_field(name=f"{prefix}website", value="The command you type for the bot to show the link to the website of this bot.")
     embed.set_footer(text="Noice")
     await ctx.channel.send(embed=embed)
     logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)
@@ -345,8 +345,14 @@ async def forceverify(ctx, member: discord.Member):
     DiscordID = member.id
     logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)
     WalkerID[DiscordID] = ctx.message.content[37:]
+    WalkerIDdict = {"walkerID": WalkerID}
+    generalchannel= discord.utils.get(member.guild.text_channels, name = generalchannelname)
+    with open ('data.json','r+') as f:
+                    json.dump(WalkerIDdict, f)
     try:
+        await ctx.channel.send("Verification completed, congrats!")
         WalkerIDnick = "#"+str(WalkerID[DiscordID])
+        await generalchannel.send(f"Walker {WalkerIDnick} has joined, Welcome!")
         await member.add_roles(role)
         await member.remove_roles(unrole)
         await member.edit(nick=WalkerIDnick)
@@ -367,6 +373,7 @@ async def forceunverify(ctx, member: discord.Member):
     unrole = get(member.guild.roles, name = unverifiedrolename)
     logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)
     try:
+        await ctx.channel.send("Unverified.")
         await member.add_roles(unrole)
         await member.remove_roles(role)
     except discord.errors.Forbidden:
@@ -384,7 +391,7 @@ async def sourcecode(ctx):
 
 @client.command()
 async def about(ctx):
-    await ctx.channel.send("This bot is the ONLY open source, support for all ids, and multi-server compatible Walker verification bot for walker discord servers.")
+    await ctx.channel.send("This bot is the ONLY Open-source, it has support for ALL Walker IDs, and multi-server compatibility. This Walker verification bot is developed by Walker #7416 and it works in Walker Discord servers.")
 
 @client.command()
 async def servercount(ctx):
@@ -397,6 +404,10 @@ async def serverinvite(ctx):
 @client.command()
 async def donate(ctx):
     await ctx.channel.send("https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=SQA2T7K5ACTPJ&item_name=GreenNexusBotSupport&currency_code=USD&source=url")
+@client.command()
+async def website(ctx):
+    await ctx.channel.send("https://w41k3rdiscord.junyuxu.com/greennexus")
+
 @client.event
 async def on_guild_join(guild):
     await random.choice(guild.text_channels).send(f'{guild.owner.mention} Thanks for adding me. In order for me to properly function, make sure you have a role named "{verifiedrolename}" and "{unverifiedrolename}", and make sure my role is above them. Your server must have a channel  that I can send messages that is named {verificationchannelname}, {logchannelname}, and {generalchannelname}.')

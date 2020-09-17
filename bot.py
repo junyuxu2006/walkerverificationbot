@@ -36,7 +36,7 @@ verificationchannelname = configs['verificationchannelname']
 logchannelname = configs['logchannelname']
 client = commands.Bot(command_prefix = prefix)
 commenturl = configs['commenturl']
-token = configs['token']
+token = configs['devtoken']
 verifiedrole = configs['verifiedrolename']
 controlchannelname = configs['controlchannelname']
 generalchannelname = configs['generalchannelname']
@@ -274,8 +274,11 @@ async def go(ctx):
                         WalkerIDFound[DiscordID] = commentAuthorName
             else:
                         WalkerIDFound[DiscordID] = commentAuthor
-            print(WalkerIDFound[DiscordID])
+            await print(WalkerIDFound[DiscordID])
+            print(TokenFound == client.commentToken[DiscordID])
+            print(str(WalkerIDFound[DiscordID]) == WalkerID[DiscordID])
             if TokenFound == client.commentToken[DiscordID] and str(WalkerIDFound[DiscordID]) == WalkerID[DiscordID]:
+                await print("working")
                 await ctx.channel.send("Verification completed, congrats!")
                 driver.quit()
                 role = get(member.guild.roles, name = verifiedrolename)
@@ -297,6 +300,7 @@ async def go(ctx):
                     await random.choice(ctx.author.guild.text_channels).send(f"Walker {WalkerIDnick} has joined, Welcome!")
                 print(DiscordID)  
             else:
+                await print("working")
                 await asyncio.sleep(2)
                 await ctx.channel.send("Could not find your comment, if you did comment, please make sure you commented the token below the link and you entered the correct Walker ID.")
                 driver.quit()
@@ -341,7 +345,7 @@ async def forceverify(ctx, member: discord.Member):
     unrole = get(member.guild.roles, name = unverifiedrolename)
     DiscordID = member.id
     logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)
-    WalkerID[DiscordID] = ctx.message.content[37:]
+    WalkerID[DiscordID] = ctx.message.content[35:]
     generalchannel= discord.utils.get(member.guild.text_channels, name = generalchannelname)
     mydict = { "WalkerID": WalkerID[DiscordID], "DiscordID": DiscordID }
     global x

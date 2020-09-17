@@ -43,11 +43,10 @@ generalchannelname = configs['generalchannelname']
 url = configs['url']
 
 client.remove_command('help')
-client.commentToken = ""
 
 WalkerIDFound = {}
 TokenFound = {}
-
+client.commentToken = {}
 import pymongo
 
 myclient = pymongo.MongoClient("mongodb://localhost:27017/")
@@ -258,21 +257,25 @@ async def go(ctx):
             await ctx.channel.send(f"An error occured, try again now with `{prefix}verify`, then `{prefix}go`. This is most likely caused by you trying to put a text, nothing after, unmatched ID, or your Walker ID with the # without running `{prefix}verify`, which is invalid, retrying with the correct usage might fix the problem.")
             driver.quit()
     except selenium.common.exceptions.NoSuchElementException:
+        driver.quit()
         commentCounter = 0
         with req.urlopen(url) as response: #get the string from API
                 data = json.load(response)
         try:
             commentAuthor = data[commentCounter]['author']
             commentAuthorName = int(data[commentCounter]['author_name'])
-            TokenFound = data[commentCounter]['content']['rendered'][3:25] #cut out the keyEnter
+            TokenFound = data[commentCounter]['content']['rendered'][3:26] #cut out the keyEnter
             print(f'commentAuthor: {commentAuthor}')
             print(f'commentAuthorName: {commentAuthorName}')
             print(f'TokenFound: {TokenFound}')
+            print(f'TokenGenerated: {client.commentToken[DiscordID]}')
+            print(f'WalkerIDEntered: {str(WalkerID[DiscordID])}')
             if int(commentAuthorName) >= 50:
-                        WalkerID[DiscordID] = commentAuthorName
+                        WalkerIDFound[DiscordID] = commentAuthorName
             else:
-                        WalkerID[DiscordID] = commentAuthor
-            if TokenFound[DiscordID] == client.commentToken[DiscordID] and WalkerIDFound[DiscordID] == str(WalkerID[DiscordID]):
+                        WalkerIDFound[DiscordID] = commentAuthor
+            print(WalkerIDFound[DiscordID])
+            if TokenFound == client.commentToken[DiscordID] and str(WalkerIDFound[DiscordID]) == WalkerID[DiscordID]:
                 await ctx.channel.send("Verification completed, congrats!")
                 driver.quit()
                 role = get(member.guild.roles, name = verifiedrolename)

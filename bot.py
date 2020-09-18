@@ -24,6 +24,7 @@ from datetime import datetime
 import json
 from discord.ext.commands import CommandOnCooldown
 import urllib.request as req
+import bs4
 PATH = configs['PATH']
 link = configs['link']
 email = configs['email']
@@ -36,11 +37,14 @@ verificationchannelname = configs['verificationchannelname']
 logchannelname = configs['logchannelname']
 client = commands.Bot(command_prefix = prefix)
 commenturl = configs['commenturl']
-token = configs['devtoken']
+token = configs['token']
 verifiedrole = configs['verifiedrolename']
 controlchannelname = configs['controlchannelname']
 generalchannelname = configs['generalchannelname']
 url = configs['url']
+
+
+
 
 client.remove_command('help')
 
@@ -72,7 +76,7 @@ async def on_ready():
         await asyncio.sleep(10)
         activity = discord.Game(name=f"{prefix}help | Stop Separatism", type=3)
         await client.change_presence(activity=activity)
-        await asyncio.sleep(10)
+        await asyncio.sleep(10) #status
 
 @client.event
 async def on_command_error(ctx, error):
@@ -206,12 +210,15 @@ async def go(ctx):
     driver.get(link)
     print(driver.title)
     inputemail = driver.find_element_by_id("user_login")
+    inputemail.click()
     inputemail.send_keys(email)
     inputpassword = driver.find_element_by_id("user_pass")
+    inputpassword.click()
     inputpassword.send_keys(password)
     inputpassword.send_keys(Keys.ENTER)
     WalkerID[DiscordID] = ctx.message.content[4:]
     print(WalkerID[DiscordID])
+    print(ctx.author.guild.name)
     try:
         WalkerIDelement = driver.find_element_by_xpath("/html/body/div[5]/div/div[1]/main/section/ul/li[last()]/div/div[1]/a/span")
         Tokenelement = driver.find_element_by_xpath("/html/body/div[5]/div/div[1]/main/section/ul/li[last()]/div/p")
@@ -228,7 +235,7 @@ async def go(ctx):
                 unrole = get(member.guild.roles, name = unverifiedrolename)
                 WalkerIDnick = "#"+str(WalkerID[DiscordID])
                 generalchannel= discord.utils.get(member.guild.text_channels, name = generalchannelname)
-                mydict = { "WalkerID": WalkerID[DiscordID], "DiscordID": DiscordID }
+                mydict = { "WalkerID": int(WalkerID[DiscordID]), "DiscordID": str(DiscordID) }
                 global x
                 x = mycol.insert_one(mydict)
                 try:
@@ -248,7 +255,7 @@ async def go(ctx):
                 await ctx.channel.send("Could not find your comment, if you did comment, please make sure you commented the token below the link and you entered the correct Walker ID.")
                 driver.quit()
         except KeyError:
-            await ctx.channel.send(f"An error occured, try again now with `{prefix}verify`. This is most likely caused by someone running this command on this bot at the same time as you.")
+            await ctx.channel.send(f"An error occured, try again now with `{prefix}verify`. This is most likely caused by someone running this command on this bot at the same time as you, or not following instructions by typing something else other than your Walker ID without # after go.")
             driver.quit()
         except selenium.common.exceptions.NoSuchElementException:
             await ctx.channel.send(f"An error occured. You may have to wait a while for this error to be fixed, but in most cases, trying again with `{prefix}verify` will fix the problem.")
@@ -285,7 +292,7 @@ async def go(ctx):
                 unrole = get(member.guild.roles, name = unverifiedrolename)
                 WalkerIDnick = "#"+str(WalkerID[DiscordID])
                 generalchannel= discord.utils.get(member.guild.text_channels, name = generalchannelname)
-                mydict = { "WalkerID": WalkerID[DiscordID], "DiscordID": DiscordID }
+                mydict = { "WalkerID": int(WalkerID[DiscordID]), "DiscordID": str(DiscordID) }
                 x = mycol.insert_one(mydict)
                 try:
                     await member.add_roles(role)
@@ -334,8 +341,8 @@ async def unverify(ctx):
 @client.command()
 @has_permissions(administrator=True)
 async def lastverified(ctx):
-        x = mycol.find_one()
-        await ctx.channel.send(str(x)[46:-1])
+        x = mycol.find().sort([('_id', -1)]).limit(6)
+        await ctx.channel.send(str(list(x)))
 @has_permissions(administrator=True)
 @client.command()
 async def forceverify(ctx, member: discord.Member):
@@ -345,9 +352,11 @@ async def forceverify(ctx, member: discord.Member):
     unrole = get(member.guild.roles, name = unverifiedrolename)
     DiscordID = member.id
     logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)
-    WalkerID[DiscordID] = ctx.message.content[35:]
+    WalkerID[DiscordID] = ctx.message.content[37:]
     generalchannel= discord.utils.get(member.guild.text_channels, name = generalchannelname)
-    mydict = { "WalkerID": WalkerID[DiscordID], "DiscordID": DiscordID }
+    mydict = { "WalkerID": int(WalkerID[DiscordID]), "DiscordID": str(DiscordID) }
+    print(WalkerID[DiscordID])
+    print(member.guild.name)
     global x
     x = mycol.insert_one(mydict)
     try:
@@ -358,7 +367,7 @@ async def forceverify(ctx, member: discord.Member):
         await member.remove_roles(unrole)
         await member.edit(nick=WalkerIDnick)
     except discord.errors.Forbidden:
-        await ctx.channel.send(f"{ctx.author.guild.owner.mention} I do not have permissions to add/remove roles and/or change {ctx.author.mention}'s nickname.")
+        await ctx.channel.send(f"{ctx.author.guild.owner.mention} I do not have permissions to add/remove roles and/or change {member.mention}'s nickname.")
     embed=discord.Embed(title=f"Log: forceverify {WalkerIDnick}", color=0x0400ff)
     embed.add_field(name="Action: forceverify", value=f"**User**: {ctx.author.name}#{ctx.author.discriminator} **Time**: {current_time} UTC", inline=True)
     try:

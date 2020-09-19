@@ -7,7 +7,6 @@ configs = {\
 'controlchannelname' : 'name here',\
 'controlroomID' : 'ID here',\
 'WelcomeChannel' : 'ID here',\
-'PATH' : "PATH to webdriver here. (use double slash instead of slash",\
 'email' : "Your email for the account on the platform",\
 'password' : "Your password for the account on the platform",\
 'commenturl' : "URL of the post",\

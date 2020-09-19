@@ -89,7 +89,7 @@ async def verify(ctx):
     client.commentToken = {}
     client.commentToken[DiscordID] = token[:8] + secrets.token_urlsafe(6) + token[8:]
     stringToken = str(client.commentToken[DiscordID])
-    await ctx.channel.send(f"NOTE: This discord bot is **still in development, if you experience errors, please contact Walker #7416.** Please make a comment on the following post exactly as the token below. Then, type `{prefix}go WalkerID(NO #)`, where WalkerID is YOUR OWN WALKER ID. **IF the bot doesn't respond in 10 seconds to the command `{prefix}go`, there is a problem and you should contact #7416, if it takes a bit longer to respond, then that's completely normal.**"+" <"+str(commenturl) + "> ")
+    await ctx.channel.send(f"NOTE: This discord bot is **still in development, if you experience errors, please contact Walker #7416.** Please make a comment on the following post exactly as the token below. Then, type `{prefix}go WalkerID(NO #)`, where WalkerID is YOUR OWN WALKER ID. For example if your Walker #7416, you would type `{prefix}go 7416. **IF the bot doesn't respond in 10 seconds to the command `{prefix}go`, there is a problem and you should contact #7416, if it takes a bit longer to respond, then that's completely normal.**"+" <"+str(commenturl) + "> ")
     await ctx.channel.send("copy the token below and paste it in the comments section of the post.")
     await ctx.channel.send(stringToken)
     logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)

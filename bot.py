@@ -1,12 +1,7 @@
-from selenium import webdriver
+from login import login, comments
 from config import configs
 import re
 import time
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-import selenium
 import discord
 import secrets
 import time
@@ -25,7 +20,6 @@ import json
 from discord.ext.commands import CommandOnCooldown
 import urllib.request as req
 import bs4
-PATH = configs['PATH']
 link = configs['link']
 email = configs['email']
 password = configs['password']
@@ -48,8 +42,7 @@ url = configs['url']
 
 client.remove_command('help')
 
-WalkerIDFound = {}
-TokenFound = {}
+
 client.commentToken = {}
 import pymongo
 
@@ -157,6 +150,7 @@ async def help(ctx):
     embed.add_field(name=f"{prefix}serverinvite", value="The command you type for me to invite you to my official server!")
     embed.add_field(name=f"{prefix}donate", value="The command you type to donate for the development of this bot!")
     embed.add_field(name=f"{prefix}website", value="The command you type for the bot to show the link to the website of this bot.")
+    embed.add_field(name=f"{prefix}ping", value="The command you type for the bot to show the current ping to the client!")
     embed.set_footer(text="Noice")
     await ctx.channel.send(embed=embed)
     logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)
@@ -190,7 +184,7 @@ async def say (ctx):
 
 @commands.cooldown(1, 5, commands.BucketType.user)
 @client.command()
-async def go(ctx):
+async def go(ctx): #***ignore this comment*** easypass
     WalkerID = {}
     member = ctx.author
     logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)
@@ -203,120 +197,45 @@ async def go(ctx):
         await logchannel.send(embed = embed)
     except AttributeError:
         await ctx.channel.send(f"Unable to log this action, {member.guild.owner.mention}. Does the channel {logchannelname} exist?")
-    DiscordID = member.id
-    WalkerID[DiscordID] = ctx.message.content[4:]
     await ctx.channel.send("Thanks, I'm checking your comment.")
-    driver = webdriver.Chrome(PATH)
-    driver.get(link)
-    print(driver.title)
-    inputemail = driver.find_element_by_id("user_login")
-    inputemail.click()
-    inputemail.send_keys(email)
-    inputpassword = driver.find_element_by_id("user_pass")
-    inputpassword.click()
-    inputpassword.send_keys(password)
-    inputpassword.send_keys(Keys.ENTER)
-    WalkerID[DiscordID] = ctx.message.content[4:]
-    print(WalkerID[DiscordID])
-    print(ctx.author.guild.name)
+    #new verify part here
+    response = comments([email, password])
+    lastComment = response[-1]
+    walkerIDFound = lastComment[0]
+    tokenFound = lastComment[1]
+    print("1)" + tokenFound)
     try:
-        WalkerIDelement = driver.find_element_by_xpath("/html/body/div[5]/div/div[1]/main/section/ul/li[last()]/div/div[1]/a/span")
-        Tokenelement = driver.find_element_by_xpath("/html/body/div[5]/div/div[1]/main/section/ul/li[last()]/div/p")
-        WalkerIDFound = {}
-        TokenFound = {}
-        WalkerIDFound[DiscordID] = WalkerIDelement.get_attribute('textContent')
-        TokenFound[DiscordID] = Tokenelement.get_attribute('textContent')
-        try:
-            TokenFound[DiscordID] = Tokenelement.get_attribute('textContent')
-            if TokenFound[DiscordID] == client.commentToken[DiscordID] and WalkerIDFound[DiscordID] == str(WalkerID[DiscordID]):
-                await ctx.channel.send("Verification completed, congrats!")
-                driver.quit()
-                role = get(member.guild.roles, name = verifiedrolename)
-                unrole = get(member.guild.roles, name = unverifiedrolename)
-                WalkerIDnick = "#"+str(WalkerID[DiscordID])
-                generalchannel= discord.utils.get(member.guild.text_channels, name = generalchannelname)
-                mydict = { "WalkerID": int(WalkerID[DiscordID]), "DiscordID": str(DiscordID) }
-                global x
-                x = mycol.insert_one(mydict)
-                try:
-                    await member.add_roles(role)
-                    await member.remove_roles(unrole)
-                    await member.edit(nick=WalkerIDnick)
-                except discord.errors.Forbidden:
-                    await ctx.channel.send(f"{ctx.author.guild.owner.mention} I do not have permissions to add/remove roles and/or change {ctx.author.mention}'s nickname.")
-                try:
-                    await generalchannel.send(f"Walker {WalkerIDnick} has joined, Welcome!")
-                except AttributeError:
-                    await ctx.channel.send(f"{ctx.author.guild.owner.mention} I could not find the channel {generalchannelname}, in order for the bot to work properly, please add a channel with that name.")
-                    await random.choice(ctx.author.guild.text_channels).send(f"Walker {WalkerIDnick} has joined, Welcome!")
-                print(DiscordID)  
-            else:
-                await asyncio.sleep(2)
-                await ctx.channel.send("Could not find your comment, if you did comment, please make sure you commented the token below the link and you entered the correct Walker ID.")
-                driver.quit()
-        except KeyError:
-            await ctx.channel.send(f"An error occured, try again now with `{prefix}verify`. This is most likely caused by someone running this command on this bot at the same time as you, or not following instructions by typing something else other than your Walker ID without # after go.")
-            driver.quit()
-        except selenium.common.exceptions.NoSuchElementException:
-            await ctx.channel.send(f"An error occured. You may have to wait a while for this error to be fixed, but in most cases, trying again with `{prefix}verify` will fix the problem.")
-            driver.quit()
-        except IndexError:
-            await ctx.channel.send(f"An error occured, try again now with `{prefix}verify`, then `{prefix}go`. This is most likely caused by you trying to put a text, nothing after, unmatched ID, or your Walker ID with the # without running `{prefix}verify`, which is invalid, retrying with the correct usage might fix the problem.")
-            driver.quit()
-    except selenium.common.exceptions.NoSuchElementException:
-        driver.quit()
-        commentCounter = 0
-        with req.urlopen(url) as response: #get the string from API
-                data = json.load(response)
-        try:
-            commentAuthor = data[commentCounter]['author']
-            commentAuthorName = int(data[commentCounter]['author_name'])
-            TokenFound = data[commentCounter]['content']['rendered'][3:26] #cut out the keyEnter
-            print(f'commentAuthor: {commentAuthor}')
-            print(f'commentAuthorName: {commentAuthorName}')
-            print(f'TokenFound: {TokenFound}')
-            print(f'TokenGenerated: {client.commentToken[DiscordID]}')
-            print(f'WalkerIDEntered: {str(WalkerID[DiscordID])}')
-            if int(commentAuthorName) >= 50:
-                        WalkerIDFound[DiscordID] = commentAuthorName
-            else:
-                        WalkerIDFound[DiscordID] = commentAuthor
-            await print(WalkerIDFound[DiscordID])
-            print(TokenFound == client.commentToken[DiscordID])
-            print(str(WalkerIDFound[DiscordID]) == WalkerID[DiscordID])
-            if TokenFound == client.commentToken[DiscordID] and str(WalkerIDFound[DiscordID]) == WalkerID[DiscordID]:
-                await print("working")
-                await ctx.channel.send("Verification completed, congrats!")
-                driver.quit()
-                role = get(member.guild.roles, name = verifiedrolename)
-                unrole = get(member.guild.roles, name = unverifiedrolename)
-                WalkerIDnick = "#"+str(WalkerID[DiscordID])
-                generalchannel= discord.utils.get(member.guild.text_channels, name = generalchannelname)
-                mydict = { "WalkerID": int(WalkerID[DiscordID]), "DiscordID": str(DiscordID) }
-                x = mycol.insert_one(mydict)
-                try:
-                    await member.add_roles(role)
-                    await member.remove_roles(unrole)
-                    await member.edit(nick=WalkerIDnick)
-                except discord.errors.Forbidden:
-                    await ctx.channel.send(f"{ctx.author.guild.owner.mention} I do not have permissions to add/remove roles and/or change {ctx.author.mention}'s nickname.")
-                try:
-                    await generalchannel.send(f"Walker {WalkerIDnick} has joined, Welcome!")
-                except AttributeError:
-                    await ctx.channel.send(f"{ctx.author.guild.owner.mention} I could not find the channel {generalchannelname}, in order for the bot to work properly, please add a channel with that name.")
-                    await random.choice(ctx.author.guild.text_channels).send(f"Walker {WalkerIDnick} has joined, Welcome!")
-                print(DiscordID)  
-            else:
-                await print("working")
-                await asyncio.sleep(2)
-                await ctx.channel.send("Could not find your comment, if you did comment, please make sure you commented the token below the link and you entered the correct Walker ID.")
-                driver.quit()
-        except KeyError:
-            await ctx.channel.send(f"An error occured, try again now with `{prefix}verify`. This is most likely caused by someone running this command on this bot at the same time as you.")
-            driver.quit()
-        except IndexError:
-            await ctx.channel.send(f"An error occured, try again now with `{prefix}verify`, then `{prefix}go`. This is most likely caused by you trying to put a text, nothing after, unmatched ID, or your Walker ID with the # without running `{prefix}verify`, which is invalid, retrying with the correct usage might fix the problem.")
-            driver.quit()
+        print("2)" + client.commentToken[DiscordID])
+        if walkerIDFound == WalkerID[DiscordID] and client.commentToken[DiscordID] in tokenFound:
+        
+            await ctx.channel.send("Verification completed, congrats!")
+            role = get(member.guild.roles, name = verifiedrolename)
+            unrole = get(member.guild.roles, name = unverifiedrolename)
+            WalkerIDnick = "#"+str(WalkerID[DiscordID])
+            generalchannel= discord.utils.get(member.guild.text_channels, name = generalchannelname)
+            mydict = { "WalkerID": int(WalkerID[DiscordID]), "DiscordID": str(DiscordID) }
+            x = mycol.insert_one(mydict)
+            try:
+                await member.add_roles(role)
+                await member.remove_roles(unrole)
+                await member.edit(nick=WalkerIDnick)
+            except discord.errors.Forbidden:
+                await ctx.channel.send(f"{ctx.author.guild.owner.mention} I do not have permissions to add/remove roles and/or change {ctx.author.mention}'s nickname.")
+            try:
+                await generalchannel.send(f"Walker {WalkerIDnick} has joined, Welcome!")
+            except AttributeError:
+                await ctx.channel.send(f"{ctx.author.guild.owner.mention} I could not find the channel {generalchannelname}, in order for the bot to work properly, please add a channel with that name.")
+                await random.choice(ctx.author.guild.text_channels).send(f"Walker {WalkerIDnick} has joined, Welcome!")
+            print(DiscordID)  
+        else:
+            await ctx.channel.send("Could not find your comment, if you did comment, please make sure you commented the token below the link and you entered the correct Walker ID.")
+
+    except:
+        await ctx.channel.send(f"you need to do {prefix}verify first")
+    print("3)" + walkerIDFound)
+    print("4)" + WalkerID[DiscordID])
+
+
 
 @commands.cooldown(1, 1, commands.BucketType.user)
 @client.command()
@@ -418,6 +337,10 @@ async def donate(ctx):
 async def website(ctx):
     await ctx.channel.send("https://greennexus.junyuxu.com/index")
 
+@client.command()
+async def ping(ctx):
+    await ctx.channel.send(f"ping: {round(client.latency * 1000)} ms")
+
 @client.event
 async def on_guild_join(guild):
     await random.choice(guild.text_channels).send(f'{guild.owner.mention} Thanks for adding me. In order for me to properly function, make sure you have a role named "{verifiedrolename}" and "{unverifiedrolename}", and make sure my role is above them. Your server must have a channel  that I can send messages that is named {verificationchannelname}, {logchannelname}, and {generalchannelname}.')
@@ -432,3 +355,5 @@ async def on_member_join(member):
     except AttributeError:
         await random.choice(member.guild.text_channels).send(f"Hey {member.mention}, welcome to **{member.guild.name}**, please type `{prefix}verify` to get started on your verification process.")
 client.run(token)
+#comments_list = comments(user)
+#print(comments_list[-1])

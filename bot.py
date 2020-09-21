@@ -1,5 +1,6 @@
 from login import login, comments
 from config import configs
+from meme import memelist
 import re
 import time
 import discord
@@ -20,6 +21,7 @@ import json
 from discord.ext.commands import CommandOnCooldown
 import urllib.request as req
 import bs4
+import random
 link = configs['link']
 email = configs['email']
 password = configs['password']
@@ -36,6 +38,7 @@ verifiedrole = configs['verifiedrolename']
 controlchannelname = configs['controlchannelname']
 generalchannelname = configs['generalchannelname']
 url = configs['url']
+memelisthaha = memelist['memelist']
 
 
 
@@ -151,6 +154,7 @@ async def help(ctx):
     embed.add_field(name=f"{prefix}donate", value="The command you type to donate for the development of this bot!")
     embed.add_field(name=f"{prefix}website", value="The command you type for the bot to show the link to the website of this bot.")
     embed.add_field(name=f"{prefix}ping", value="The command you type for the bot to show the current ping to the client!")
+    embed.add_field(name=f"{prefix}meme", value="The command you type for the bot to show a random meme from the list!")
     embed.set_footer(text="Noice")
     await ctx.channel.send(embed=embed)
     logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)
@@ -231,7 +235,7 @@ async def go(ctx): #***ignore this comment*** easypass
             await ctx.channel.send("Could not find your comment, if you did comment, please make sure you commented the token below the link and you entered the correct Walker ID.")
 
     except:
-        await ctx.channel.send(f"you need to do {prefix}verify first")
+        await ctx.channel.send(f"You need to do the command {prefix}verify first.")
     print("3)" + walkerIDFound)
     print("4)" + WalkerID[DiscordID])
 
@@ -314,6 +318,12 @@ async def forceunverify(ctx, member: discord.Member):
     except AttributeError:
         await ctx.channel.send(f"Unable to log this action, {member.guild.owner.mention}. Does the channel #{logchannelname} exist?")
 
+@commands.cooldown(1, 1, commands.BucketType.user)
+@client.command()
+async def meme(ctx):
+    await ctx.channel.send(random.choice(memelisthaha))
+
+
 @client.command()
 async def sourcecode(ctx):
     await ctx.channel.send("here's the code! https://github.com/junyuxu2006/walkerverificationbot/")
@@ -354,6 +364,7 @@ async def on_member_join(member):
         await channel.send(f"Welcome{member.mention}. The **{member.guild.name}** server is dedicated to Walkers with an official ID. I'm your friendly verification bot to help you to authorize yourself, getting access to all the Walkers channels on this server in return, please type `{prefix}verify` to get started on your verification process.")
     except AttributeError:
         await random.choice(member.guild.text_channels).send(f"Hey {member.mention}, welcome to **{member.guild.name}**, please type `{prefix}verify` to get started on your verification process.")
+
 client.run(token)
 #comments_list = comments(user)
 #print(comments_list[-1])

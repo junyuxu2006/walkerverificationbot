@@ -22,6 +22,7 @@ from discord.ext.commands import CommandOnCooldown
 import urllib.request as req
 import bs4
 import random
+from getpost import post
 link = configs['link']
 email = configs['email']
 password = configs['password']
@@ -33,7 +34,7 @@ verificationchannelname = configs['verificationchannelname']
 logchannelname = configs['logchannelname']
 client = commands.Bot(command_prefix = prefix)
 commenturl = configs['commenturl']
-token = configs['token']
+token = configs['devtoken']
 verifiedrole = configs['verifiedrolename']
 controlchannelname = configs['controlchannelname']
 generalchannelname = configs['generalchannelname']
@@ -320,6 +321,35 @@ async def forceunverify(ctx, member: discord.Member):
 
 @commands.cooldown(1, 1, commands.BucketType.user)
 @client.command()
+async def newposts(ctx):
+    embed = discord.Embed(title="Posts List")
+    posts = post([email,password])
+    for i in posts:
+        author = i[0]
+        try:
+            int(author)
+            str(author)
+            author = "#" + author
+        except:
+            pass
+        title = i[1]
+        link = i[2]
+        embed.add_field(name=author, value= f"[{title}]({link})", inline=True)
+
+    await ctx.channel.send(embed=embed)
+    
+@commands.cooldown(1, 1, commands.BucketType.user)
+@client.command()
+async def checkpost(ctx, args):
+    posts = post([email,password])
+    if int(args[0]) < len(posts):
+        await ctx.channel.send("Out of range!")
+    else:
+        await ctx.channel.send("Command is on construction, please try later!") #run...
+
+
+@commands.cooldown(1, 1, commands.BucketType.user)
+@client.command()
 async def meme(ctx):
     await ctx.channel.send(random.choice(memelisthaha))
 
@@ -330,7 +360,7 @@ async def sourcecode(ctx):
 
 @client.command()
 async def about(ctx):
-    await ctx.channel.send("This bot is the ONLY Open-source, it has support for ALL Walker IDs, and multi-server compatibility. This Walker verification bot is developed by Walker #7416 and it works in Walker Discord servers.")
+    await ctx.channel.send("This bot is the ONLY Open-source, it has support for ALL Walker IDs, and multi-server compatible. This Walker verification bot is developed by Walker #7416 and it works in Walker Discord servers.")
 
 @client.command()
 async def servercount(ctx):

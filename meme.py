@@ -16,7 +16,18 @@ memelist = {\
     "https://www.instagram.com/p/B_h_2dGjMTt/media?size=l",
     "https://www.instagram.com/p/B_0WTIkjZvy/media?size=l",
     "https://media1.tenor.com/images/7a00f0e58dc8c5da8d6da09e2de20b2c/tenor.gif?itemid=17530559",
+    "https://cdn.discordapp.com/attachments/756131086068613200/759281113469419520/9k.png",
+    "https://cdn.discordapp.com/attachments/756131086068613200/759281267027607572/alan-walker-anakin-skywalker-enter-the-dark-side-fall-into-66214647.png",
+    "https://cdn.discordapp.com/attachments/756131086068613200/759281386749165588/74605a921f830fa324fb1049b5f89c8d.png",
+    "https://cdn.discordapp.com/attachments/671042904948604936/725269147105099856/42oamw.jpg",
+    "https://www.youtube.com/watch?v=WhPkwemZBDM",
+    "https://cdn.discordapp.com/attachments/756131086068613200/759284385865400390/maxresdefault.png",
+    "https://www.instagram.com/p/CFkmf1FFO8J/media?size=l",
+    "https://www.instagram.com/p/CFiI-04lLfr/media?size=l",
+    "https://www.instagram.com/p/CFg9vf_lLL7/media?size=l",
+    "https://www.instagram.com/p/CFfuQcrlUsD/media?size=l",
+    "https://cdn.discordapp.com/attachments/732417979266105354/760186388729299025/IMG_20200928_102655.jpg",
+    
 ],\
 
 }
-

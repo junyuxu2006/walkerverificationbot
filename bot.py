@@ -1,4 +1,4 @@
-from login import login, comments
+from login import login, comments, post, post_contents, searchPost
 from config import configs
 from meme import memelist
 import re
@@ -6,35 +6,27 @@ import time
 import discord
 import secrets
 import time
-from discord.ext.commands import Bot
-from discord.ext.commands import Cog
-from discord.ext.commands import command
-from discord.ext.commands import has_permissions
-from discord.ext.commands import MissingPermissions
+from discord.ext.commands import Bot, Cog, command, has_permissions, MissingPermissions, CommandOnCooldown
 import random
 from config import configs
 from discord.ext import commands
 from discord.utils import get
 import asyncio
 from datetime import datetime
-import json
-from discord.ext.commands import CommandOnCooldown
 import urllib.request as req
-import bs4
-import random
-from getpost import post
 link = configs['link']
 email = configs['email']
 password = configs['password']
 verifiedrolename = configs['verifiedrolename']
 unverifiedrolename = configs['unverifiedrolename']
 Invitelink = configs['Invitelink']
-prefix = configs['prefix']
+prefix = configs['devprefix']
 verificationchannelname = configs['verificationchannelname']
 logchannelname = configs['logchannelname']
 client = commands.Bot(command_prefix = prefix)
 commenturl = configs['commenturl']
-token = configs['token']
+allposts= configs['allposts']
+token = configs['devtoken']
 verifiedrole = configs['verifiedrolename']
 controlchannelname = configs['controlchannelname']
 generalchannelname = configs['generalchannelname']
@@ -73,7 +65,7 @@ async def on_ready():
         await asyncio.sleep(10)
         activity = discord.Game(name=f"{prefix}help | Stop Separatism", type=3)
         await client.change_presence(activity=activity)
-        await asyncio.sleep(10) #status
+        await asyncio.sleep(10)
 
 @client.event
 async def on_command_error(ctx, error):
@@ -156,6 +148,11 @@ async def help(ctx):
     embed.add_field(name=f"{prefix}website", value="The command you type for the bot to show the link to the website of this bot.")
     embed.add_field(name=f"{prefix}ping", value="The command you type for the bot to show the current ping to the client!")
     embed.add_field(name=f"{prefix}meme", value="The command you type for the bot to show a random meme from the list!")
+    embed.add_field(name=f"{prefix}newposts", value="The command you type for the bot to show the newest posts from the platform! **Takes couple seconds, be patient**")
+    embed.add_field(name=f"{prefix}checkpost", value="The command you type for the bot to check the post for the number you put! **Also takes couple seconds**")
+    embed.add_field(name=f"{prefix}kick", value="The command you type for the bot to kick the desired member **Must have permissions**")
+    embed.add_field(name=f"{prefix}ban", value="The command you type for the bot to ban the desired member **Must have permissions**")
+    embed.add_field(name=f"{prefix}searchpost", value="The command you type for the bot to search posts on the platform!")
     embed.set_footer(text="Noice")
     await ctx.channel.send(embed=embed)
     logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)
@@ -169,9 +166,9 @@ async def help(ctx):
 
 @commands.cooldown(1, 1, commands.BucketType.user)
 @client.command()
-async def say (ctx):
+async def say (ctx, args):
     try:
-        Content = ctx.message.content[5:]
+        Content = args
         await ctx.message.channel.purge(limit = 1)
         await ctx.channel.send(Content)
     except AttributeError:
@@ -189,13 +186,13 @@ async def say (ctx):
 
 @commands.cooldown(1, 5, commands.BucketType.user)
 @client.command()
-async def go(ctx): #***ignore this comment*** easypass
+async def go(ctx, args):
     WalkerID = {}
     member = ctx.author
     logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)
     current_time = datetime.utcnow()
     DiscordID = member.id
-    WalkerID[DiscordID] = ctx.message.content[4:]
+    WalkerID[DiscordID] = args
     embed=discord.Embed(title="Log: go", color=0x0400ff)
     embed.add_field(name=f"Action: CommentCheck AttemptedID: {WalkerID[DiscordID]}", value=f"**User**: {ctx.author.name}#{ctx.author.discriminator} **Time**: {current_time} UTC", inline=True)
     try:
@@ -203,8 +200,7 @@ async def go(ctx): #***ignore this comment*** easypass
     except AttributeError:
         await ctx.channel.send(f"Unable to log this action, {member.guild.owner.mention}. Does the channel {logchannelname} exist?")
     await ctx.channel.send("Thanks, I'm checking your comment.")
-    #new verify part here
-    response = comments([email, password])
+    response = comments([email, password], commenturl)
     lastComment = response[-1]
     walkerIDFound = lastComment[0]
     tokenFound = lastComment[1]
@@ -218,8 +214,9 @@ async def go(ctx): #***ignore this comment*** easypass
             unrole = get(member.guild.roles, name = unverifiedrolename)
             WalkerIDnick = "#"+str(WalkerID[DiscordID])
             generalchannel= discord.utils.get(member.guild.text_channels, name = generalchannelname)
-            mydict = { "WalkerID": int(WalkerID[DiscordID]), "DiscordID": str(DiscordID) }
+            mydict = { "WalkerID": int(WalkerID[DiscordID]), "DiscordID": int(DiscordID) }
             x = mycol.insert_one(mydict)
+            print(x)
             try:
                 await member.add_roles(role)
                 await member.remove_roles(unrole)
@@ -269,14 +266,14 @@ async def lastverified(ctx):
         await ctx.channel.send(str(list(x)))
 @has_permissions(administrator=True)
 @client.command()
-async def forceverify(ctx, member: discord.Member):
+async def forceverify(ctx, member: discord.Member, args):
     current_time = datetime.utcnow()
     WalkerID = {}
     role = get(member.guild.roles, name = verifiedrolename)
     unrole = get(member.guild.roles, name = unverifiedrolename)
     DiscordID = member.id
     logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)
-    WalkerID[DiscordID] = ctx.message.content[37:]
+    WalkerID[DiscordID] = args
     generalchannel= discord.utils.get(member.guild.text_channels, name = generalchannelname)
     mydict = { "WalkerID": int(WalkerID[DiscordID]), "DiscordID": str(DiscordID) }
     print(WalkerID[DiscordID])
@@ -322,30 +319,153 @@ async def forceunverify(ctx, member: discord.Member):
 @commands.cooldown(1, 1, commands.BucketType.user)
 @client.command()
 async def newposts(ctx):
+    embed = discord.Embed(title="Looking for new posts...")
+    message = await ctx.channel.send(embed=embed)
     embed = discord.Embed(title="Posts List")
-    posts = post([email,password])
+    embed.set_footer(text=f"Requested by {ctx.author.name}#{ctx.author.discriminator}", icon_url=ctx.author.avatar_url)
+    posts = post([email,password], allposts)
+    index = 0
     for i in posts:
         author = i[0]
         try:
             int(author)
             str(author)
-            author = "#" + author
+            
+            author = str(index) + ". #" + author
         except:
-            pass
+            author = str(index) + ". " + i[0]
         title = i[1]
         link = i[2]
+        index+=1
         embed.add_field(name=author, value= f"[{title}]({link})", inline=True)
+    await message.edit(embed=embed)
 
-    await ctx.channel.send(embed=embed)
-    
+@commands.cooldown(1, 1, commands.BucketType.user)
+@client.command()
+async def avatar(ctx, member: discord.Member=None):
+    if not member:
+        member = ctx.message.author
+    userAvatar = member.avatar_url
+    await ctx.channel.send(userAvatar)
+
 @commands.cooldown(1, 1, commands.BucketType.user)
 @client.command()
 async def checkpost(ctx, args):
-    posts = post([email,password])
-    if int(args[0]) < len(posts):
-        await ctx.channel.send("Out of range!")
-    else:
-        await ctx.channel.send("Command is on construction, please try later!") #run...
+    embed = discord.Embed(title="Checking post!", color=0x0400ff)
+    message = await ctx.channel.send(embed=embed)
+
+    posts = post([email,password], allposts)
+    try:
+        length = int(args)
+        if length > len(posts) or length < 0:
+            print(length)
+            embed = discord.Embed(title="Out of range!", color=0x0400ff)
+            await message.edit(embed=embed)
+        else:
+            postURL = posts[length][2]
+            desc = post_contents([email, password], postURL)
+            author = posts[length][0]
+            try:
+                int(author)
+                str(author)
+                author = "#" + author
+            except:
+                pass
+            title = author + " - " + posts[length][1]
+            embed = discord.Embed(title=title, description=desc , color=0x0400ff)
+            embed.set_footer(text=f"Requested by {ctx.author.name}#{ctx.author.discriminator}", icon_url=ctx.author.avatar_url)
+            await message.edit(embed=embed)
+    except:
+        embed = discord.Embed(title="Error! please check if you wrote it right!", color=0x0400ff)
+        await message.edit(embed=embed)
+
+@commands.cooldown(1, 1, commands.BucketType.user)
+@client.command()
+@commands.has_permissions(kick_members=True)
+async def kick(ctx, member: discord.Member, *, args=None):
+    reason = args
+    await member.kick(reason=reason)
+    embed=discord.Embed(title="Kicked", description=f"**{member.name}#{member.discriminator}** has been kicked from the server by **{ctx.author.name}#{ctx.author.discriminator}**")
+    embed.add_field(name="Reason", value=str(reason))
+    await ctx.channel.send(embed=embed)
+    current_time = datetime.utcnow()
+    logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)
+    embed=discord.Embed(title=f"Log: kick ({ctx.author.name}#{ctx.author.discriminator})", color=0x0400ff)
+    embed.add_field(name="Action: Kick member", value=f"**User**: {member.name}#{member.discriminator} **Admin/Mod**: {ctx.author.name}#{ctx.author.discriminator} **Time**: {current_time} UTC **Reason**: {reason}", inline=True)
+    try:
+        await logchannel.send(embed = embed)
+    except AttributeError:
+        await ctx.channel.send(f"Unable to log this action, {member.guild.owner.mention}. Does the channel {logchannelname} exist?")
+
+@commands.cooldown(1, 1, commands.BucketType.user)
+@client.command()
+async def searchpost(ctx):
+    args = ctx.message.content[12:]
+    print(args)
+    toSearch = args
+    embed = discord.Embed(title="Searching posts...")
+    message = await ctx.channel.send(embed=embed)
+    posts = searchPost([email,password], toSearch, max=20)
+    embed = discord.Embed(title="Posts List")
+    embed.set_footer(text=f"Requested by {ctx.author.name}#{ctx.author.discriminator}", icon_url=ctx.author.avatar_url)
+    index = 0
+    for i in posts:
+        author = i[0]
+        try:
+            int(author)
+            str(author)
+            
+            author = str(index) + ". #" + author
+        except:
+            author = str(index) + ". " + i[0]
+        title = i[1]
+        link = i[2]
+        index+=1
+        embed.add_field(name=author, value= f"[{title}]({link})", inline=True)
+
+    await message.edit(embed=embed)
+
+
+
+@commands.cooldown(1, 1, commands.BucketType.user)
+@client.command()
+@commands.has_permissions(ban_members=True)
+async def ban(ctx, member: discord.Member, *, args=None):
+    reason = args
+    await member.ban(reason=reason)
+    embed=discord.Embed(title="Banned", description=f"**{member.name}#{member.discriminator}** has been banned from the server by **{ctx.author.name}#{ctx.author.discriminator}**")
+    embed.add_field(name="Reason", value=str(reason))
+    await ctx.channel.send(embed=embed)
+    current_time = datetime.utcnow()
+    logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)
+    embed=discord.Embed(title=f"Log: ban ({ctx.author.name}#{ctx.author.discriminator})", color=0x0400ff)
+    embed.add_field(name="Action: ban member", value=f"**User**: {member.name}#{member.discriminator} **Admin/Mod**: {ctx.author.name}#{ctx.author.discriminator} **Time**: {current_time} UTC **Reason**: {reason}", inline=True)
+    try:
+        await logchannel.send(embed = embed)
+    except AttributeError:
+        await ctx.channel.send(f"Unable to log this action, {member.guild.owner.mention}. Does the channel {logchannelname} exist?")
+
+#@commands.cooldown(1, 1, commands.BucketType.user)
+#@client.command()
+#@commands.has_permissions(ban_members=True)
+#async def unban(ctx, *, member, args):
+    #reason = args
+    #banned_users = await ctx.guild.bans()
+    #memberName, memberDiscriminator = member.split("#")
+    #for ban_entry in banned_users:
+        #user = ban_entry.user
+        #if (user.name, user.discriminator) == (memberName, memberDiscriminator):
+            #await ctx.guild.unban(user)
+    #embed=discord.Embed(title="Unbanned", description=f"**{member.name}#{member.discriminator}** has been unbanned from the server by **{ctx.author.name}#{ctx.author.discriminator}**")
+    #await ctx.channel.send(embed=embed)
+    #current_time = datetime.utcnow()
+    #logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)
+    #embed=discord.Embed(title=f"Log: unban ({ctx.author.name}#{ctx.author.discriminator})", color=0x0400ff)
+    #embed.add_field(name="Action: unban member", value=f"**User**: {member.name}#{member.discriminator} **Admin/Mod**: {ctx.author.name}#{ctx.author.discriminator} **Time**: {current_time} UTC", inline=True)
+    #try:
+        #await logchannel.send(embed = embed)
+    #except AttributeError:
+        #await ctx.channel.send(f"Unable to log this action, {member.guild.owner.mention}. Does the channel {logchannelname} exist?")
 
 
 @commands.cooldown(1, 1, commands.BucketType.user)
@@ -381,9 +501,13 @@ async def website(ctx):
 async def ping(ctx):
     await ctx.channel.send(f"ping: {round(client.latency * 1000)} ms")
 
+@client.command()
+async def contact(ctx):
+    await ctx.channel.send(f"Contact us by joining our discord server! Just simply type {prefix}serverinvite.")
+
 @client.event
 async def on_guild_join(guild):
-    await random.choice(guild.text_channels).send(f'{guild.owner.mention} Thanks for adding me. In order for me to properly function, make sure you have a role named "{verifiedrolename}" and "{unverifiedrolename}", and make sure my role is above them. Your server must have a channel  that I can send messages that is named {verificationchannelname}, {logchannelname}, and {generalchannelname}.')
+    await random.choice(guild.text_channels).send(f'{guild.owner.mention} Thanks for adding me. In order for me to properly function, make sure you have a role named "{verifiedrolename}" and "{unverifiedrolename}", and make sure my role is above them. Your server must have channels that I can send messages that are named {verificationchannelname}, {logchannelname}, and {generalchannelname}.')
 
 @client.event
 async def on_member_join(member):
@@ -391,10 +515,9 @@ async def on_member_join(member):
     channel = discord.utils.get(member.guild.text_channels, name = verificationchannelname)
     await member.add_roles(unrole)
     try:
-        await channel.send(f"Welcome{member.mention}. The **{member.guild.name}** server is dedicated to Walkers with an official ID. I'm your friendly verification bot to help you to authorize yourself, getting access to all the Walkers channels on this server in return, please type `{prefix}verify` to get started on your verification process.")
+        await channel.send(f"Welcome{member.mention}. **{member.guild.name}** is a server dedicated to Walkers with an official ID. I'm your friendly verification bot to help you to authorize yourself, getting access to all the Walkers channels on this server in return, please type `{prefix}verify` to get started on your verification process.")
     except AttributeError:
         await random.choice(member.guild.text_channels).send(f"Hey {member.mention}, welcome to **{member.guild.name}**, please type `{prefix}verify` to get started on your verification process.")
 
 client.run(token)
-#comments_list = comments(user)
-#print(comments_list[-1])
+

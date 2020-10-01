@@ -19,3 +19,5 @@ dependencies: discord, discord.py, selenium, time, secrets, mongodb, and pymongo
 
 Known issues: 
 1. sometimes, the site requires a prove your humanity captcha (This will be fixed and the captcha will be done automatically)
+
+[![Run on Repl.it](https://repl.it/badge/github/junyuxu2006/walkerverificationbot)](https://repl.it/github/junyuxu2006/walkerverificationbot)

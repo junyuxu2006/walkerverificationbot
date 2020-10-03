@@ -14,19 +14,20 @@ from discord.utils import get
 import asyncio
 from datetime import datetime
 import urllib.request as req
+import json
 link = configs['link']
 email = configs['email']
 password = configs['password']
 verifiedrolename = configs['verifiedrolename']
 unverifiedrolename = configs['unverifiedrolename']
 Invitelink = configs['Invitelink']
-prefix = configs['devprefix']
+prefix = configs['prefix']
 verificationchannelname = configs['verificationchannelname']
 logchannelname = configs['logchannelname']
 client = commands.Bot(command_prefix = prefix)
 commenturl = configs['commenturl']
 allposts= configs['allposts']
-token = configs['devtoken']
+token = configs['token']
 verifiedrole = configs['verifiedrolename']
 controlchannelname = configs['controlchannelname']
 generalchannelname = configs['generalchannelname']
@@ -45,7 +46,8 @@ import pymongo
 myclient = pymongo.MongoClient("mongodb://localhost:27017/")
 mydb = myclient["mydatabase"]
 mycol = mydb["verifiedusers"]
-
+myservers = mydb["servers"]
+#moving to test.py
 @client.event
 async def on_ready():
     print('We have logged in as {0.user}'.format(client))
@@ -153,6 +155,7 @@ async def help(ctx):
     embed.add_field(name=f"{prefix}kick", value="The command you type for the bot to kick the desired member **Must have permissions**")
     embed.add_field(name=f"{prefix}ban", value="The command you type for the bot to ban the desired member **Must have permissions**")
     embed.add_field(name=f"{prefix}searchpost", value="The command you type for the bot to search posts on the platform!")
+    embed.add_field(name=f"{prefix}avatar", value="The command you type for the bot to show you or the user mention's avatar!")
     embed.set_footer(text="Noice")
     await ctx.channel.send(embed=embed)
     logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)
@@ -166,9 +169,9 @@ async def help(ctx):
 
 @commands.cooldown(1, 1, commands.BucketType.user)
 @client.command()
-async def say (ctx, args):
+async def say (ctx):
     try:
-        Content = args
+        Content = ctx.message.content[4:]
         await ctx.message.channel.purge(limit = 1)
         await ctx.channel.send(Content)
     except AttributeError:
@@ -192,7 +195,10 @@ async def go(ctx, args):
     logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)
     current_time = datetime.utcnow()
     DiscordID = member.id
-    WalkerID[DiscordID] = args
+    if args != '0':
+        WalkerID[DiscordID] = args
+    else:
+        WalkerID[DiscordID] = '#0'
     embed=discord.Embed(title="Log: go", color=0x0400ff)
     embed.add_field(name=f"Action: CommentCheck AttemptedID: {WalkerID[DiscordID]}", value=f"**User**: {ctx.author.name}#{ctx.author.discriminator} **Time**: {current_time} UTC", inline=True)
     try:
@@ -212,7 +218,10 @@ async def go(ctx, args):
             await ctx.channel.send("Verification completed, congrats!")
             role = get(member.guild.roles, name = verifiedrolename)
             unrole = get(member.guild.roles, name = unverifiedrolename)
-            WalkerIDnick = "#"+str(WalkerID[DiscordID])
+            if WalkerID[DiscordID] != '#0':
+                WalkerIDnick = "#"+str(WalkerID[DiscordID])
+            else:
+                WalkerIDnick = str(WalkerID[DiscordID])
             generalchannel= discord.utils.get(member.guild.text_channels, name = generalchannelname)
             mydict = { "WalkerID": int(WalkerID[DiscordID]), "DiscordID": int(DiscordID) }
             x = mycol.insert_one(mydict)
@@ -225,15 +234,60 @@ async def go(ctx, args):
                 await ctx.channel.send(f"{ctx.author.guild.owner.mention} I do not have permissions to add/remove roles and/or change {ctx.author.mention}'s nickname.")
             try:
                 await generalchannel.send(f"Walker {WalkerIDnick} has joined, Welcome!")
+                client.commentToken[DiscordID] = None
             except AttributeError:
                 await ctx.channel.send(f"{ctx.author.guild.owner.mention} I could not find the channel {generalchannelname}, in order for the bot to work properly, please add a channel with that name.")
                 await random.choice(ctx.author.guild.text_channels).send(f"Walker {WalkerIDnick} has joined, Welcome!")
-            print(DiscordID)  
+                client.commentToken[DiscordID] = None  
         else:
-            await ctx.channel.send("Could not find your comment, if you did comment, please make sure you commented the token below the link and you entered the correct Walker ID.")
-
+            print("issue")
+            with req.urlopen(url) as response: #get the string from API
+                data = json.load(response)
+            commentCounter = 0
+            commentAuthor = data[commentCounter]['author']
+            commentAuthorName = int(data[commentCounter]['author_name'])
+            tokenFound = data[commentCounter]['content']['rendered'][3:-5] #cut out the keyEnter
+            print(f'commentAuthor: {commentAuthor}')
+            print(f'commentAuthorName: {commentAuthorName}')
+            print(f'keyEnter: {tokenFound}')
+            print(f'TokenGenerated: {client.commentToken[DiscordID]}')
+            if WalkerID[DiscordID] != '#0':
+                if int(commentAuthorName) >= 50:
+                    walkerIDFound = commentAuthorName
+                else:
+                    walkerIDFound = commentAuthor
+            else:
+                walkerIDFound = '#0'
+            print(f'WalkerID: {walkerIDFound}')
+            if walkerIDFound == WalkerID[DiscordID] and client.commentToken[DiscordID] in tokenFound:
+        
+                await ctx.channel.send("Verification completed, congrats!")
+                role = get(member.guild.roles, name = verifiedrolename)
+                unrole = get(member.guild.roles, name = unverifiedrolename)
+                if WalkerID[DiscordID] != '#0':
+                    WalkerIDnick = "#"+str(WalkerID[DiscordID])
+                else:
+                    WalkerIDnick = WalkerID[DiscordID]
+                generalchannel= discord.utils.get(member.guild.text_channels, name = generalchannelname)
+                mydict = { "WalkerID": int(WalkerID[DiscordID]), "DiscordID": int(DiscordID) }
+                x = mycol.insert_one(mydict)
+                print(x)
+                try:
+                    await member.add_roles(role)
+                    await member.remove_roles(unrole)
+                    await member.edit(nick=WalkerIDnick)
+                except discord.errors.Forbidden:
+                    await ctx.channel.send(f"{ctx.author.guild.owner.mention} I do not have permissions to add/remove roles and/or change {ctx.author.mention}'s nickname.")
+                try:
+                    await generalchannel.send(f"Walker {WalkerIDnick} has joined, Welcome!")
+                except AttributeError:
+                    await ctx.channel.send(f"{ctx.author.guild.owner.mention} I could not find the channel {generalchannelname}, in order for the bot to work properly, please add a channel with that name.")
+                    await random.choice(ctx.author.guild.text_channels).send(f"Walker {WalkerIDnick} has joined, Welcome!")
+                    client.commentToken[DiscordID] = None
+            else:
+                await ctx.channel.send("Could not find your comment, if you did comment, please make sure you commented the token below the link and you entered the correct Walker ID.")
     except:
-        await ctx.channel.send(f"You need to do the command {prefix}verify first.")
+        await ctx.channel.send(f"You need to do the command {prefix}verify first. know that the Generated token works one time only.")
     print("3)" + walkerIDFound)
     print("4)" + WalkerID[DiscordID])
 
@@ -258,6 +312,7 @@ async def unverify(ctx):
         await ctx.channel.send(f"Unable to log this action, {member.guild.owner.mention}. Does the channel #{logchannelname} exist?")
     except discord.errors.Forbidden:
         await ctx.channel.send(f"{ctx.author.guild.owner.mention} I do not have permissions to add/remove roles and/or change {ctx.author.mention}'s nickname.")
+
 @commands.cooldown(1, 1, commands.BucketType.user)
 @client.command()
 @has_permissions(administrator=True)
@@ -282,7 +337,10 @@ async def forceverify(ctx, member: discord.Member, args):
     x = mycol.insert_one(mydict)
     try:
         await ctx.channel.send("Verification completed, congrats!")
-        WalkerIDnick = "#"+str(WalkerID[DiscordID])
+        if WalkerID[DiscordID] != '#0':
+            WalkerIDnick = "#"+str(WalkerID[DiscordID])
+        else:
+            WalkerIDnick = str(WalkerID[DiscordID])
         await generalchannel.send(f"Walker {WalkerIDnick} has joined, Welcome!")
         await member.add_roles(role)
         await member.remove_roles(unrole)
@@ -422,10 +480,24 @@ async def searchpost(ctx):
         link = i[2]
         index+=1
         embed.add_field(name=author, value= f"[{title}]({link})", inline=True)
-
     await message.edit(embed=embed)
 
+def check(author):
+    def inner_check(message):
+        print(message.author.guild.text_channels)
+        if message.content not in message.author.guild.text_channels == True:
+            message.channel.send('Please write *correct channel name*')
+        return message.author == author and message.content[0] != "!"
+    return inner_check #the fuck is this code lol
 
+@commands.cooldown(1, 1, commands.BucketType.user)
+@client.command()
+@commands.has_permissions(administrator=True)
+async def setup(ctx):
+    #hmmmm i am not sure how to explain, like when a bot asks "enter a number" and than you answer... 
+    await ctx.channel.send("enter channel name:")
+    await client.wait_for('message', check=check(ctx.author), timeout=30)
+    await ctx.channel.send("detected a enter") 
 
 @commands.cooldown(1, 1, commands.BucketType.user)
 @client.command()
@@ -438,8 +510,8 @@ async def ban(ctx, member: discord.Member, *, args=None):
     await ctx.channel.send(embed=embed)
     current_time = datetime.utcnow()
     logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)
-    embed=discord.Embed(title=f"Log: ban ({ctx.author.name}#{ctx.author.discriminator})", color=0x0400ff)
-    embed.add_field(name="Action: ban member", value=f"**User**: {member.name}#{member.discriminator} **Admin/Mod**: {ctx.author.name}#{ctx.author.discriminator} **Time**: {current_time} UTC **Reason**: {reason}", inline=True)
+    embed=discord.Embed(title=f"Log: ban ({member.name}#{member.discriminator})", color=0x0400ff)
+    embed.add_field(name="Action: Ban member", value=f"**User**: {member.name}#{member.discriminator} **Admin/Mod**: {ctx.author.name}#{ctx.author.discriminator} **Time**: {current_time} UTC **Reason**: {reason}", inline=True)
     try:
         await logchannel.send(embed = embed)
     except AttributeError:
@@ -480,7 +552,7 @@ async def sourcecode(ctx):
 
 @client.command()
 async def about(ctx):
-    await ctx.channel.send("This bot is the ONLY Open-source, it has support for ALL Walker IDs, and multi-server compatible. This Walker verification bot is developed by Walker #7416 and it works in Walker Discord servers.")
+    await ctx.channel.send("This bot is the ONLY Open-source, it has support for ALL Walker IDs, and multi-server compatible. This Walker verification bot is developed by Walker #7416 and Walker #34860. It works in Walker Discord servers.")
 
 @client.command()
 async def servercount(ctx):
@@ -519,5 +591,15 @@ async def on_member_join(member):
     except AttributeError:
         await random.choice(member.guild.text_channels).send(f"Hey {member.mention}, welcome to **{member.guild.name}**, please type `{prefix}verify` to get started on your verification process.")
 
-client.run(token)
+@client.event
+async def on_member_remove(member):
+    current_time = datetime.utcnow()
+    logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)
+    embed=discord.Embed(title=f"Log: Leave ({member.name}#{member.discriminator})", color=0x0400ff)
+    embed.add_field(name="Action: Member left", value=f"**Member**: {member.name}#{member.discriminator} **Time**: {current_time} UTC",inline=True)
+    try:
+        await logchannel.send(embed = embed)
+    except AttributeError:
+        pass
 
+client.run(token)

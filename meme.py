@@ -27,7 +27,9 @@ memelist = {\
     "https://www.instagram.com/p/CFg9vf_lLL7/media?size=l",
     "https://www.instagram.com/p/CFfuQcrlUsD/media?size=l",
     "https://cdn.discordapp.com/attachments/732417979266105354/760186388729299025/IMG_20200928_102655.jpg",
-    
+    "https://www.instagram.com/p/CF0JmXZlAy0/media?size=l",
+    "https://www.instagram.com/p/CF2H5VSl1V7/media?size=l",
+    "https://www.instagram.com/p/CF0JmXZlAy0/media?size=l",
 ],\
 
 }

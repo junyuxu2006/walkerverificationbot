@@ -1,3 +1,4 @@
+#discord supports instagram emb
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
@@ -79,7 +80,7 @@ def post_contents(user, URL):
     return description
 
 def searchPost(user, toSearch, max=10):
-    r = login(user,searchlink+toSearch
+    r = login(user,f"{searchlink}{toSearch}")#run
     html = BeautifulSoup(r.text, "html.parser")
     posts = html.findAll("a", {"class": "nolink"})
     post_list = []
@@ -89,7 +90,7 @@ def searchPost(user, toSearch, max=10):
             post_link = post['href']
             h2 = post.find("h2")
             texts  = str(h2)[str(h2).find(">")+1:]
-            texts  = texts[str(texts).find(">")+1:]
+            texts  = texts[str(texts).find(">")+1:]#run
             author = texts[0:str(texts).find("<")]
             texts = texts[str(texts).find(">")+1:]
             title = texts[0:str(texts).find("<")]

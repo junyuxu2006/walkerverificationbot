@@ -7,9 +7,10 @@ import discord
 import secrets
 import time
 from discord.ext.commands import Bot, Cog, command, has_permissions, MissingPermissions, CommandOnCooldown
+from discord.ext import commands
 import random
 from config import configs
-from discord.ext import commands
+from discord.ext import commands, tasks
 from discord.utils import get
 import asyncio
 from datetime import datetime
@@ -21,6 +22,8 @@ import traceback
 import threading
 import requests
 from bs4 import BeautifulSoup
+import logging
+import dbl
 link = configs['link']
 email = configs['email']
 password = configs['password']
@@ -30,7 +33,6 @@ Invitelink = configs['Invitelink']
 prefix = configs['devprefix']
 verificationchannelname = configs['verificationchannelname']
 logchannelname = configs['logchannelname'] 
-client = commands.Bot(command_prefix = prefix)
 commenturl = configs['commenturl']
 allposts= configs['allposts']
 token = configs['devtoken']
@@ -40,13 +42,15 @@ generalchannelname = configs['generalchannelname']
 url = configs['url']
 memelisthaha = memelist['memelist']
 devids = configs['devids']
+topggtoken = configs['topggtoken']
+intents = discord.Intents.default()
+intents.members = False
+Bot = commands.Bot(command_prefix=prefix, intents=intents)
+
+Bot.remove_command('help')
 
 
-
-client.remove_command('help')
-
-
-client.commentToken = {}
+Bot.commentToken = {}
 import pymongo
 
 myclient = pymongo.MongoClient("mongodb://localhost:27017/")
@@ -54,28 +58,28 @@ mydb = myclient["mydatabase"]
 mycol = mydb["verifiedusers"]
 myservers = mydb["servers"]
 #moving to test.py
-@client.event
+@Bot.event
 async def on_ready():
-    print('We have logged in as {0.user}'.format(client))
+    print(f'We have logged in as {Bot.user}')
     loggedin = 1
     while (loggedin == 1):
         activity = discord.Game(name=f"{prefix}help | We Are Unity", type=3)
-        await client.change_presence(activity=activity)
+        await Bot.change_presence(activity=activity)
         await asyncio.sleep(10)
         activity = discord.Game(name=f"{prefix}help | Walkers are best friends", type=3)
-        await client.change_presence(activity=activity)
+        await Bot.change_presence(activity=activity)
         await asyncio.sleep(10)
         activity = discord.Game(name=f"{prefix}help | Stop hater Walkers", type=3)
-        await client.change_presence(activity=activity)
+        await Bot.change_presence(activity=activity)
         await asyncio.sleep(10)
         activity = discord.Game(name=f"{prefix}help | Maintain Peace and Unity", type=3)
-        await client.change_presence(activity=activity)
+        await Bot.change_presence(activity=activity)
         await asyncio.sleep(10)
         activity = discord.Game(name=f"{prefix}help | Stop Separatism", type=3)
-        await client.change_presence(activity=activity)
+        await Bot.change_presence(activity=activity)
         await asyncio.sleep(10)
 
-@client.event
+@Bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.MissingPermissions):
         await ctx.channel.send("Insufficient permissions!")
@@ -83,14 +87,14 @@ async def on_command_error(ctx, error):
         await ctx.channel.send("Command is on cooldown!")
 
 @commands.cooldown(1, 1, commands.BucketType.user)
-@client.command()
+@Bot.command()
 async def verify(ctx):
     member = ctx.author
     DiscordID = member.id
     token = hex(DiscordID)[2:] #stop scrolling for a sec LMFAO
-    client.commentToken = {}
-    client.commentToken[DiscordID] = token[:8] + secrets.token_urlsafe(6) + token[8:]
-    stringToken = str(client.commentToken[DiscordID])
+    Bot.commentToken = {}
+    Bot.commentToken[DiscordID] = token[:8] + secrets.token_urlsafe(6) + token[8:]
+    stringToken = str(Bot.commentToken[DiscordID])
     async with ctx.channel.typing():
         await asyncio.sleep(5)
         await ctx.channel.send(f"NOTE: This discord bot is **still in development, if you experience errors, please contact Walker #7416.** Please make a comment on the following post exactly as the token below. Then, type `{prefix}go WalkerID(NO #)`, where WalkerID is YOUR OWN WALKER ID. For example if your Walker #7416, you would type `{prefix}go 7416`. **IF the bot doesn't respond in 10 seconds to the command `{prefix}go`, there is a problem and you should contact #7416, if it takes a bit longer to respond, then that's completely normal.**"+" <"+str(commenturl) + "> ")
@@ -107,7 +111,7 @@ async def verify(ctx):
 
 
 @commands.cooldown(1, 1, commands.BucketType.user)
-@client.command()
+@Bot.command()
 async def hello(ctx):
     member = ctx.author
     async with ctx.channel.typing():
@@ -123,7 +127,7 @@ async def hello(ctx):
         await ctx.channel.send(f"Unable to log this action, {member.guild.owner.mention}. Does the channel {logchannelname} exist?")
 
 @commands.cooldown(1, 1, commands.BucketType.user)
-@client.command()
+@Bot.command()
 async def invite(ctx):
     async with ctx.channel.typing():
         await asyncio.sleep(1)
@@ -139,7 +143,7 @@ async def invite(ctx):
         await ctx.channel.send(f"Unable to log this action, {member.guild.owner.mention}. Does the channel {logchannelname} exist?")
 
 @commands.cooldown(1, 1, commands.BucketType.user)
-@client.command()
+@Bot.command()
 async def help(ctx, args=None):
     passed = 0
     try:
@@ -163,10 +167,12 @@ async def help(ctx, args=None):
             embed.add_field(name=f"{prefix}servercount", value="The command you type for me to show how many servers I'm in!")
             embed.add_field(name=f"{prefix}serverinvite", value="The command you type for me to invite you to my official server!")
             embed.add_field(name=f"{prefix}donate", value="The command you type to donate for the development of this bot!")
+            embed.add_field(name=f"{prefix}vote", value="The command you type to vote to show your support of me!")
             embed.add_field(name=f"{prefix}website", value="The command you type for the bot to show the link to the website of this bot.")
-            embed.add_field(name=f"{prefix}ping", value="The command you type for the bot to show the current ping to the client!")
+            embed.add_field(name=f"{prefix}ping", value="The command you type for the bot to show the current ping to the Bot!")
             embed.add_field(name=f"{prefix}usercount", value="The command you type for the bot to show the current number of Walker Discord accounts verified with this bot!")
             embed.add_field(name=f"{prefix}contact", value="The command you type for the bot to show you the contact information of the developers.")
+            embed.add_field(name=f"{prefix}weather", value=f"The command you type for the bot to show you the current weather for the requested coordinates. **COORDINATES ONLY** Usage: {prefix}weather 60.3913 5.3221 Output: Bergen, Vestland, Norway Weather:")
             passed = 1
         if args == 'mod':
             embed.add_field(name=f"{prefix}kick", value="The command you type for the bot to kick the desired member **Must have permissions**")
@@ -213,7 +219,7 @@ async def help(ctx, args=None):
         print (traceback.format_exc())
 
 @commands.cooldown(1, 1, commands.BucketType.user)
-@client.command(pass_context=True)
+@Bot.command(pass_context=True)
 async def say(ctx, *, args):
     try:
         Content = args
@@ -235,7 +241,7 @@ async def say(ctx, *, args):
         await ctx.channel.send(f"Unable to log this action, {ctx.author.guild.owner.mention}. Does the channel {logchannelname} exist?")
 
 @commands.cooldown(1, 5, commands.BucketType.user)
-@client.command()
+@Bot.command()
 async def go(ctx, args):
     WalkerID = {}
     member = ctx.author
@@ -253,70 +259,81 @@ async def go(ctx, args):
     embed.add_field(name=f"Action: CommentCheck AttemptedID: {WalkerID[DiscordID]}", value=f"**User**: {ctx.author.mention} **Time**: {current_time} UTC", inline=True)
     try:
         await logchannel.send(embed = embed)
-    except AttributeError:
-        async with ctx.channel.typing():
-            await asyncio.sleep(2)
-            await ctx.channel.send(f"Unable to log this action, {member.guild.owner.mention}. Does the channel {logchannelname} exist?")
+    except:
+        pass
     async with ctx.channel.typing():
         await asyncio.sleep(1)
         await ctx.channel.send("Thanks, I'm checking your comment.")
-    response = comments([email, password], commenturl)
-    lastComment = response[-1]
-    walkerIDFound = lastComment[0]
-    tokenFound = lastComment[1]
-    print("1)" + tokenFound)
+    try:
+        response = comments([email, password], commenturl)
+        lastComment = response[-1]
+        walkerIDFound = lastComment[0]
+        tokenFound = lastComment[1]
+        print("1)" + tokenFound)
+        issue = 0
+        if lastComment == None or walkerIDFound == None or tokenFound == None:
+            issue = 1
+    except:
+        issue = 1
     try:
         r = login([email, password], commenturl)
-        print("2)" + client.commentToken[DiscordID])
-        if walkerIDFound == WalkerID[DiscordID] and client.commentToken[DiscordID] in tokenFound:
-            if str(r) == '<Response [401]>':
-                async with ctx.channel.typing():
-                    await ctx.channel.send(f"Response 401 occured. Big problem.")
-            if str(r) == '<Response [200]>':
-                await ctx.channel.send(f"Response 200, good.")
-            else:
-                await ctx.channel.send(f"Response {str(r.status_code)}.")
-            async with ctx.channel.typing():
-                await asyncio.sleep(1)
-                await ctx.channel.send("Verification completed, congrats!")
-            role = get(member.guild.roles, name = verifiedrolename)
-            unrole = get(member.guild.roles, name = unverifiedrolename)
-            if WalkerID[DiscordID] != '#0':
-                WalkerIDnick = "#"+str(WalkerID[DiscordID])
-            else:
-                WalkerIDnick = str(WalkerID[DiscordID])
-            if '#' in args:
-                WalkerID[DiscordID] = args[1:]
-            generalchannel= discord.utils.get(member.guild.text_channels, name = generalchannelname)
-            if str(list(mycol.find({'DiscordID': member.id},{'WalkerID'}))) != '[]':
-                async with ctx.channel.typing():
-                    await asyncio.sleep(1)
-                    await ctx.channel.send("The member is already verified, updating instead. Don't worry.")
-                mydict = {'WalkerID': int(WalkerID[DiscordID]), 'DiscordID': int(DiscordID)}
-                x = mycol.update_one({'DiscordID': int(DiscordID)},{'$set': {'WalkerID': int(WalkerID[DiscordID])}})
-                print(x)
-            else:
-                mydict = {'WalkerID': int(WalkerID[DiscordID]), 'DiscordID': int(DiscordID)}
-                x = mycol.insert_one(mydict)
-                print(x)
-            try:
-                await member.add_roles(role)
-                await member.remove_roles(unrole)
-                await member.edit(nick=WalkerIDnick)
-            except discord.errors.Forbidden:
-                async with ctx.channel.typing():
-                    await asyncio.sleep(1)
-                    await ctx.channel.send(f"{ctx.author.guild.owner.mention} I do not have permissions to add/remove roles and/or change {ctx.author.mention}'s nickname.")
-            except:
+        print("2)" + Bot.commentToken[DiscordID])
+        try:
+            if walkerIDFound == WalkerID[DiscordID] and Bot.commentToken[DiscordID] in tokenFound:
                 pass
-            if client.commentToken[DiscordID] == None:
+            if walkerIDFound == WalkerID[DiscordID] and Bot.commentToken[DiscordID] in tokenFound:
+                if str(r) == '<Response [401]>':
+                    async with ctx.channel.typing():
+                        await ctx.channel.send(f"Response 401 occured. Big problem.")
+                if str(r) == '<Response [200]>':
+                    await ctx.channel.send(f"Response 200, good.")
+                else:
+                    await ctx.channel.send(f"Response {str(r.status_code)}.")
                 async with ctx.channel.typing():
-                    await asyncio.sleep(2)
-                    await ctx.channel.send(f"You need to do the command {prefix}verify first. know that the Generated token works one time only.")
+                    await asyncio.sleep(1)
+                    await ctx.channel.send("Verification completed, congrats!")
+                role = get(member.guild.roles, name = verifiedrolename)
+                unrole = get(member.guild.roles, name = unverifiedrolename)
+                if WalkerID[DiscordID] != '#0':
+                    WalkerIDnick = "#"+str(WalkerID[DiscordID])
+                else:
+                    WalkerIDnick = str(WalkerID[DiscordID])
+                if '#' in args:
+                    WalkerID[DiscordID] = args[1:]
+                generalchannel= discord.utils.get(member.guild.text_channels, name = generalchannelname)
+                if str(list(mycol.find({'DiscordID': member.id},{'WalkerID'}))) != '[]':
+                    async with ctx.channel.typing():
+                        await asyncio.sleep(1)
+                        await ctx.channel.send("The member is already verified, updating instead. Don't worry.")
+                    mydict = {'WalkerID': int(WalkerID[DiscordID]), 'DiscordID': int(DiscordID)}
+                    x = mycol.update_one({'DiscordID': int(DiscordID)},{'$set': {'WalkerID': int(WalkerID[DiscordID])}})
+                    print(x)
+                else:
+                    mydict = {'WalkerID': int(WalkerID[DiscordID]), 'DiscordID': int(DiscordID)}
+                    x = mycol.insert_one(mydict)
+                    print(x)
+                try:
+                    await member.add_roles(role)
+                    await member.remove_roles(unrole)
+                    await member.edit(nick=WalkerIDnick)
+                except discord.errors.Forbidden:
+                    async with ctx.channel.typing():
+                        await asyncio.sleep(1)
+                        await ctx.channel.send(f"{ctx.author.guild.owner.mention} I do not have permissions to add/remove roles and/or change {ctx.author.mention}'s nickname.")
+                except:
+                    pass
+                if Bot.commentToken[DiscordID] == None:
+                    async with ctx.channel.typing():
+                        await asyncio.sleep(2)
+                        await ctx.channel.send(f"You need to do the command {prefix}verify first. know that the Generated token works one time only.")
+                else:
+                    await generalchannel.send(f"Walker {WalkerIDnick} has joined, Welcome!")
+                    Bot.commentToken[DiscordID] = None 
             else:
-                await generalchannel.send(f"Walker {WalkerIDnick} has joined, Welcome!")
-                client.commentToken[DiscordID] = None 
-        else:
+                issue = 1
+        except UnboundLocalError:
+            issue = 1
+        if issue == 1:
             if str(r) == '<Response [200]>':
                 async with ctx.channel.typing():
                     await asyncio.sleep(1)
@@ -340,7 +357,7 @@ async def go(ctx, args):
             print(f'commentAuthor: {commentAuthor}')
             print(f'commentAuthorName: {commentAuthorName}')
             print(f'keyEnter: {tokenFound}')
-            print(f'TokenGenerated: {client.commentToken[DiscordID]}')
+            print(f'TokenGenerated: {Bot.commentToken[DiscordID]}')
             if WalkerID[DiscordID] != '#0':
                 if int(commentAuthorName) >= 50:
                     walkerIDFound = commentAuthorName
@@ -349,7 +366,9 @@ async def go(ctx, args):
             else:
                 pass
             print(f'WalkerID: {walkerIDFound}')
-            if walkerIDFound == int(WalkerID[DiscordID]) and client.commentToken[DiscordID] in tokenFound:
+            if walkerIDFound == int(WalkerID[DiscordID]) and Bot.commentToken[DiscordID] in tokenFound:
+                pass
+            if walkerIDFound == int(WalkerID[DiscordID]) and Bot.commentToken[DiscordID] in tokenFound:
                 async with ctx.channel.typing():
                     await ctx.channel.send("Verification completed, congrats!")
                 role = get(member.guild.roles, name = verifiedrolename)
@@ -360,7 +379,10 @@ async def go(ctx, args):
                     WalkerIDnick = WalkerID[DiscordID]
                 generalchannel= discord.utils.get(member.guild.text_channels, name = generalchannelname)
                 if str(list(mycol.find({'DiscordID': member.id},{'WalkerID'}))) != '[]':
-                    pass
+                    async with ctx.channel.typing():
+                        await asyncio.sleep(1)
+                        await ctx.channel.send("The member is already verified, updating instead. Don't worry.")
+                    
                 else:
                     mydict = { "WalkerID": int(WalkerID[DiscordID]), "DiscordID": int(DiscordID) }
                     x = mycol.insert_one(mydict)
@@ -376,7 +398,7 @@ async def go(ctx, args):
                     async with ctx.channel.typing():
                         await asyncio.sleep(1)
                         await generalchannel.send(f"Walker {WalkerIDnick} has joined, Welcome!")
-                    client.commentToken[DiscordID] = None
+                    Bot.commentToken[DiscordID] = None
             else:
                 async with ctx.channel.typing():
                     await asyncio.sleep(1)
@@ -389,6 +411,7 @@ async def go(ctx, args):
         async with ctx.channel.typing():
             await asyncio.sleep(1)
             await ctx.channel.send("Make sure the permissions are setup right, channels and roles exist.")
+            print(traceback.format_exc())
     except ValueError:
         async with ctx.channel.typing():
             await asyncio.sleep(1)
@@ -404,7 +427,7 @@ async def go(ctx, args):
 
 
 @commands.cooldown(1, 1, commands.BucketType.user)
-@client.command()
+@Bot.command()
 async def unverify(ctx):
     member = ctx.author
     if str(list(mycol.find({'DiscordID': member.id},{'WalkerID'}))) != '[]':
@@ -448,7 +471,7 @@ async def unverify(ctx):
             await member.remove_roles(role)
 
 @commands.cooldown(1, 1, commands.BucketType.user)
-@client.command()
+@Bot.command()
 @has_permissions(administrator=True)
 async def lastverified(ctx):
         x = mycol.find().sort([('_id', -1)]).limit(6)
@@ -457,7 +480,7 @@ async def lastverified(ctx):
             await ctx.channel.send(str(list(x)))
 
 @has_permissions(administrator=True)
-@client.command()
+@Bot.command()
 async def forceverify(ctx, member: discord.Member, args):
     if str(list(mycol.find({'DiscordID': ctx.author.id},{'WalkerID'}))) != '[]':
         try:
@@ -503,12 +526,12 @@ async def forceverify(ctx, member: discord.Member, args):
             await asyncio.sleep(1)
             await ctx.channel.send("Your not verified, please verify to use this command.")
 
-@client.command()
+@Bot.command()
 async def devverify(ctx, arg1, arg2):
     DiscordIDdev = arg1
     WalkerIDdev = arg2
     try:
-        if str(ctx.author.id) in devids:
+        if ctx.author.id in devids:
             if str(list(mycol.find({'DiscordID': int(DiscordIDdev)},{'WalkerID'}))) != '[]':
                 async with ctx.channel.typing():
                     await asyncio.sleep(1)
@@ -526,11 +549,11 @@ async def devverify(ctx, arg1, arg2):
                 await asyncio.sleep(1)
                 await ctx.channel.send("Invalid format!")
 
-@client.command()
+@Bot.command()
 async def devunverify(ctx, args):
     DiscordIDdev = args
     try:
-        if str(ctx.author.id) in devids:
+        if ctx.author.id in devids:
             if str(list(mycol.find({'DiscordID': int(DiscordIDdev)},{'WalkerID'}))) == '[]':
                 async with ctx.channel.typing():
                     await asyncio.sleep(1)
@@ -554,7 +577,7 @@ async def devunverify(ctx, args):
                 await ctx.channel.send("Invalid format!")
 
 @has_permissions(administrator=True)
-@client.command()
+@Bot.command()
 async def forceunverify(ctx, member: discord.Member):
     if str(list(mycol.find({'DiscordID': ctx.author.id},{'WalkerID'})))!= '[]':
         current_time = datetime.utcnow()
@@ -583,7 +606,7 @@ async def forceunverify(ctx, member: discord.Member):
             await ctx.channel.send("Your not verified, please verify to use this command.")
 
 @commands.cooldown(1, 1, commands.BucketType.user)
-@client.command()
+@Bot.command()
 async def newposts(ctx):
     if str(list(mycol.find({'DiscordID': ctx.author.id},{'WalkerID'}))) != '[]':
         embed = discord.Embed(title="Looking for new posts...")
@@ -614,7 +637,7 @@ async def newposts(ctx):
             await ctx.channel.send("Your not verified, please verify to use this command.")
 
 @commands.cooldown(1, 1, commands.BucketType.user)
-@client.command()
+@Bot.command()
 async def avatar(ctx, member: discord.Member=None):
     if not member:
         member = ctx.message.author
@@ -624,7 +647,7 @@ async def avatar(ctx, member: discord.Member=None):
         await ctx.channel.send(userAvatar)
 
 @commands.cooldown(1, 1, commands.BucketType.user)
-@client.command()
+@Bot.command()
 async def checkpost(ctx, args):
     if str(list(mycol.find({'DiscordID': ctx.author.id},{'WalkerID'}))) != '[]':
         embed = discord.Embed(title="Checking post!", color=0x0400ff)
@@ -662,7 +685,7 @@ async def checkpost(ctx, args):
             await ctx.channel.send("Your not verified, please verify to use this command.")
 
 @commands.cooldown(1, 1, commands.BucketType.user)
-@client.command()
+@Bot.command()
 @commands.has_permissions(kick_members=True)
 async def kick(ctx, member: discord.Member, *, args=None):
     reason = args
@@ -684,7 +707,7 @@ async def kick(ctx, member: discord.Member, *, args=None):
             await ctx.channel.send(f"Unable to log this action, {member.guild.owner.mention}. Does the channel {logchannelname} exist?")
 
 @commands.cooldown(1, 1, commands.BucketType.user)
-@client.command()
+@Bot.command()
 async def searchpost(ctx, *, args):
     if str(list(mycol.find({'DiscordID': ctx.author.id},{'WalkerID'}))) != '[]':
         print(args)
@@ -716,25 +739,8 @@ async def searchpost(ctx, *, args):
             await asyncio.sleep(1)
             await ctx.channel.send("Your not verified, please verify to use this command.")
 
-def check(author):
-    def inner_check(message):
-        print(message.author.guild.text_channels)
-        if message.content in message.author.guild.text_channels == False:
-            message.channel.send('Please write the *correct channel name*')
-        return message.author == author and message.content[0] != "!"
-    return inner_check #the fuck is this code lol
-
 @commands.cooldown(1, 1, commands.BucketType.user)
-@client.command()
-@commands.has_permissions(administrator=True)
-async def setup(ctx):
-    #hmmmm i am not sure how to explain, like when a bot asks "enter a number" and than you answer... 
-    await ctx.channel.send("enter channel name:")
-    await client.wait_for('message', check=check(ctx.author), timeout=30)
-    await ctx.channel.send("detected a enter") 
-
-@commands.cooldown(1, 1, commands.BucketType.user)
-@client.command()
+@Bot.command()
 @commands.has_permissions(ban_members=True)
 async def ban(ctx, member: discord.Member=None, *, args=None):
     #print (str(list(member.guild_permissions)))
@@ -772,7 +778,7 @@ async def ban(ctx, member: discord.Member=None, *, args=None):
             await ctx.channel.send("Insufficient permissions!")
 
 #@commands.cooldown(1, 1, commands.BucketType.user)
-#@client.command()
+#@Bot.command()
 #@commands.has_permissions(ban_members=True)
 #async def unban(ctx, *, member, args):
     #reason = args
@@ -794,10 +800,10 @@ async def ban(ctx, member: discord.Member=None, *, args=None):
         #await ctx.channel.send(f"Unable to log this action, {member.guild.owner.mention}. Does the channel {logchannelname} exist?")
 
 @commands.cooldown(1, 1, commands.BucketType.user)
-@client.command()
+@Bot.command()
 async def urban(ctx, *, arg1):
     term = arg1
-    async with ctx.channel.typing(): 
+    async with ctx.channel.typing():
         try:
             await asyncio.sleep(1)
             r = requests.get(f"http://www.urbandictionary.com/define.php?term={term}")
@@ -805,81 +811,127 @@ async def urban(ctx, *, arg1):
             send = soup.find("div",attrs={"class":"meaning"}).text
             embed = discord.Embed(title=term, color=0x0400ff)
             embed.add_field(name="Definition", value=send,inline=True)
-            await ctx.channel.send(embed=embed)
+            if len(embed) <=220:
+                await ctx.channel.send(embed=embed)
+            else:
+                await ctx.channel.send("Character limit reached!")
         except AttributeError:
             await asyncio.sleep(1)
             embed = discord.Embed(title=term, color=0x0400ff)
             embed.add_field(name="Definition", value='No definitions found!',inline=True)
             await ctx.channel.send(embed=embed)
 
+@commands.cooldown(1, 1, commands.BucketType.user)
+@Bot.command()
+async def weather(ctx, arg1, arg2):
+    Embed = discord.Embed(title="Getting weather information.")
+    async with ctx.channel.typing():
+        await asyncio.sleep(1)
+        message = await ctx.channel.send(embed=Embed)
+    xcoor = arg1
+    ycoor = arg2
+    r = requests.get(f"https://weather.com/weather/today/l/{xcoor},{ycoor}")
+    soup = BeautifulSoup(r.content, features="html5lib")
+    send = soup.find("h1",attrs={"class":"CurrentConditions--location--1Ayv3"})
+    send1 = soup.find("span",attrs={"class":"CurrentConditions--tempValue--3KcTQ"})
+    send2 = soup.find("div",attrs={"class":"CurrentConditions--phraseValue--2xXSr"})
+    send3 = soup.find("h2",attrs={"class":"AlertHeadline--alertText--aPVO9"})
+    try:
+        Celcius = round((int(send1.text[:-1]) - 32) * 5/9)
+        if send3 == None:
+            Embed = discord.Embed(title="Weather",color=0x0400ff)
+            Embed.add_field(name = "Requested weather", value=f"**{send.text}**: {send1.text} Farenheit, {str(Celcius)}° Celcius. {send2.text}")
+        else:
+            Embed = discord.Embed(title="Weather",color=0x0400ff)
+            Embed.add_field(name = "Requested weather", value=f"**{send.text}**: {send1.text} Farenheit, {str(Celcius)}° Celcius. {send2.text}. Main Alert: {send3.text}")
+        await message.edit(embed=Embed)
+    except AttributeError:
+        await ctx.channel.edit("No data avaliable for the requested location!")
+    except:
+        print (traceback.format_exc())
 
 @commands.cooldown(1, 1, commands.BucketType.user)
-@client.command()
+@Bot.command()
+async def twitter(ctx, args):
+    user = args
+    r = requests.get(f"https://twitter.com/{user}/")
+    soup = BeautifulSoup(r.content, features="html5lib")
+    soup.findAll(text=True)
+    print(soup)
+
+@commands.cooldown(1, 1, commands.BucketType.user)
+@Bot.command()
 async def meme(ctx):
     async with ctx.channel.typing():
         await asyncio.sleep(1)
         await ctx.channel.send(random.choice(memelisthaha))
 
-
-@client.command()
+@Bot.command()
 async def sourcecode(ctx):
     async with ctx.channel.typing():
         await asyncio.sleep(1)
         await ctx.channel.send("here's the code! https://github.com/junyuxu2006/walkerverificationbot/")
 
-@client.command()
+@Bot.command()
 async def about(ctx):
     async with ctx.channel.typing():
         await asyncio.sleep(1)
         await ctx.channel.send("This bot is the ONLY Open-source, it has support for ALL Walker IDs, and multi-server compatible. This Walker verification bot is developed by Walker #7416 and Walker #34860. It works in Walker Discord servers.")
 
-@client.command()
+@Bot.command()
 async def servercount(ctx):
     async with ctx.channel.typing():
         await asyncio.sleep(1)
-        await ctx.channel.send(f"I'm in {str(len(client.guilds)) } servers!")
+        await ctx.channel.send(f"I'm in {str(len(Bot.guilds)) } servers!")
 
-@client.command()
+@Bot.command()
 async def serverinvite(ctx):
     async with ctx.channel.typing():
         await asyncio.sleep(1)
         await ctx.channel.send("Invite for the Green Nexus Walker verification bot official server: https://discord.gg/ZrK2m3q")
 
-@client.command()
+@Bot.command()
 async def donate(ctx):
     async with ctx.channel.typing():
         await asyncio.sleep(1)
         await ctx.channel.send("https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=SQA2T7K5ACTPJ&item_name=GreenNexusBotSupport&currency_code=USD&source=url")
-@client.command()
+
+@Bot.command()
+async def vote(ctx):
+    async with ctx.channel.typing():
+        await asyncio.sleep(1)
+        await ctx.channel.send("https://top.gg/bot/753420267602313347 Vote me on top.gg through this link!")
+
+@Bot.command()
 async def website(ctx):
     async with ctx.channel.typing():
         await asyncio.sleep(1)
         await ctx.channel.send("https://greennexus.junyuxu.com/index")
 
-@client.command()
+@Bot.command()
 async def ping(ctx):
     async with ctx.channel.typing():
         await asyncio.sleep(1)
-        await ctx.channel.send(f"ping: {round(client.latency * 1000)} ms")
+        await ctx.channel.send(f"ping: {round(Bot.latency * 1000)} ms")
 
-@client.command()
+@Bot.command()
 async def usercount(ctx):
     async with ctx.channel.typing():
         await asyncio.sleep(1)
         await ctx.channel.send(f"I currently have {mycol.count_documents({})} Walker Discord accounts verified!")
 
-@client.command()
+@Bot.command()
 async def contact(ctx):
     async with ctx.channel.typing():
         await asyncio.sleep(1)
         await ctx.channel.send(f"Contact us by joining our discord server! Just simply type {prefix}serverinvite.")
 
-@client.command()
+@Bot.command()
 async def translateoptions(ctx):
     async with ctx.channel.typing():
         await asyncio.sleep(1)
         await ctx.channel.send("Here is a full list of languages and the usage! for example: no is Norwegian! https://docs.google.com/document/d/1T3qfI2o73FEkfUfd6oM21fFg4E0Gq97Czk6hCIkC0WU/edit?usp=sharing")
-@client.command()
+@Bot.command()
 async def translate(ctx, arg1, *, args):
     language = arg1
     data = args 
@@ -892,7 +944,7 @@ async def translate(ctx, arg1, *, args):
 
 @commands.has_permissions(manage_messages=True)
 @commands.cooldown(5, 5, commands.BucketType.user)
-@client.command()
+@Bot.command()
 async def clear(ctx, args):
     current_time = datetime.utcnow()
     member = ctx.author
@@ -941,11 +993,11 @@ async def clear(ctx, args):
         pass
 
 
-@client.event
+@Bot.event
 async def on_guild_join(guild):
     await random.choice(guild.text_channels).send(f'{guild.owner.mention} Thanks for adding me. In order for me to properly function, make sure you have a role named "{verifiedrolename}" and "{unverifiedrolename}", and make sure my role is above them. Your server must have channels that I can send messages that are named {verificationchannelname}, {logchannelname}, and {generalchannelname}.')
 
-@client.event
+@Bot.event
 async def on_member_join(member):
     current_time = datetime.utcnow()
     logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)
@@ -962,9 +1014,7 @@ async def on_member_join(member):
         if strlistitem != '[]':
             try:
                 result = mycol.find({'DiscordID': member.id},{'WalkerID'})
-                start = "WalkerID':"
-                end = '}'
-                result = re.search('%s(.*)%s' % (start, end), str(list(result))).group(1) 
+                result = list(result)[0]['WalkerID']
                 intWalkerID = int(result)
                 role = get(member.guild.roles, name = verifiedrolename)
                 await member.add_roles(role)
@@ -992,7 +1042,7 @@ async def on_member_join(member):
     except AttributeError:
         await random.choice(member.guild.text_channels).send(f"{member.guild.owner.mention}, the roles are not setup correctly, please fix it.")
 
-@client.event
+@Bot.event
 async def on_member_remove(member):
     current_time = datetime.utcnow()
     logchannel = discord.utils.get(member.guild.text_channels, name = logchannelname)
@@ -1003,4 +1053,21 @@ async def on_member_remove(member):
     except AttributeError:
         pass
 
-client.run(token)
+class TopGG(commands.Cog):
+    """
+    This example uses dblpy's autopost feature to post guild count to top.gg every 30 minutes.
+    """
+
+    def __init__(self, bot):
+        self.bot = bot
+        self.token = topggtoken  # set this to your DBL token
+        self.dblpy = dbl.DBLClient(self.bot, self.token, autopost=True)  # Autopost will post your guild count every 30 minutes
+    @commands.Cog.listener()
+    async def on_guild_post(self):
+        print("Server count posted successfully")
+
+def setup(bot):
+    bot.add_cog(TopGG(bot))
+
+
+Bot.run(token)
